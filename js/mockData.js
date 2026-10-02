@@ -1,71 +1,132 @@
 /**
- * EcoScan AI - Mock Data & Content
- * Indian municipal waste categories, real-world Indian sample reviews & FAQs.
+ * EcoScan AI - Content, Waste Classification Database & Eco-Facts
+ * Note: ZERO fake/mock reviews. Reviews are 100% user-generated via localStorage.
  */
 
-export const DEMO_REVIEWS = [
+// Waste Item Presets for Vision Scanner & Simulator
+export const WASTE_ITEMS_DATABASE = [
   {
-    id: 1,
-    author: "Pooja Deshmukh",
-    role: "Society Eco-Secretary",
-    city: "Pune, Maharashtra",
-    avatar: "🌿",
-    stars: "★★★★★",
-    text: "Before EcoScan AI, we used to throw milk pouches (Amul / Chitale) directly into the dustbin without washing. The app taught us to keep the pouch corner attached when snipping, rinse, and place with Sookha Kachra. Our society waste audits are now 100% compliant!"
+    id: "plastic-bottle",
+    name: "Clear PET Plastic Bottle",
+    category: "Non-Biodegradable",
+    binType: "Blue Bin",
+    binClass: "bin-blue",
+    binIcon: "🗑️",
+    binColorName: "Blue Bin (Dry / Recyclable Waste)",
+    material: "Type 1 PET Plastic",
+    image: "./assets/images/plastic_bottle.jpg",
+    instructions: "Empty all liquid, give it a quick rinse, crush the bottle flat to conserve collection volume, and place it in the dry recyclables bin.",
+    biodegradable: false
   },
   {
-    id: 2,
-    author: "Arjun Narang",
-    role: "Resident Welfare Assoc.",
-    city: "South Delhi, NCR",
-    avatar: "🌱",
-    stars: "★★★★★",
-    text: "Our RWA made wet and dry segregation mandatory. EcoScan identifies chai paper cups, plastic PET water bottles, and kitchen food scraps in 2 seconds. The Indian municipal guidelines tip is super helpful."
+    id: "banana-peel",
+    name: "Organic Banana Peel",
+    category: "Biodegradable",
+    binType: "Green Bin",
+    binClass: "bin-green",
+    binIcon: "🌱",
+    binColorName: "Green Bin (Wet / Organic Waste)",
+    material: "100% Organic Biomass",
+    image: "./assets/images/banana_peel.jpg",
+    instructions: "Deposit directly into the green wet-waste bin or your home composting unit. Decomposes naturally into rich compost within 2-4 weeks.",
+    biodegradable: true
   },
   {
-    id: 3,
-    author: "Deepa Sundaram",
-    role: "Campus Sustainability Lead",
-    city: "Bengaluru, Karnataka",
-    avatar: "🍃",
-    stars: "★★★★★",
-    text: "Very clear separation between wet waste (Geela kachra) and dry recyclable plastics. The scanner instantly spots multi-layer biscuit wrappers vs recyclable HDPE containers."
+    id: "soda-can",
+    name: "Aluminum Beverage Can",
+    category: "Non-Biodegradable",
+    binType: "Blue Bin",
+    binClass: "bin-blue",
+    binIcon: "🥫",
+    binColorName: "Blue Bin (Dry / Metal Recyclable)",
+    material: "100% Infinitely Recyclable Aluminum",
+    image: "./assets/images/soda_can.jpg",
+    instructions: "Rinse away sugary residue, ensure the tab stays attached, crush if possible, and put in the dry recyclables bin.",
+    biodegradable: false
   },
   {
-    id: 4,
-    author: "Rajesh Kumar",
-    role: "Hostel Committee Member",
-    city: "Jaipur, Rajasthan",
-    avatar: "♻️",
-    stars: "★★★★★",
-    text: "Essential prototype for college hostels. It resolved daily arguments about whether aluminum beverage cans and oily cardboard dabbas go into blue or green bins."
+    id: "cardboard-box",
+    name: "Corrugated Cardboard Packaging",
+    category: "Biodegradable",
+    binType: "Blue Bin",
+    binClass: "bin-blue",
+    binIcon: "📦",
+    binColorName: "Blue Bin (Dry Paper & Cardboard)",
+    material: "Recycled Wood Pulp & Paper Fiber",
+    image: "./assets/images/cardboard_box.jpg",
+    instructions: "Remove shipping tape and plastic stickers, flatten the box completely to save space, and place into the dry paper bin.",
+    biodegradable: true
+  },
+  {
+    id: "coffee-cup",
+    name: "Single-Use Paper Beverage Cup",
+    category: "Non-Biodegradable",
+    binType: "Blue Bin",
+    binClass: "bin-blue",
+    binIcon: "☕",
+    binColorName: "Blue Bin (Dry / Mixed Packaging)",
+    material: "Paper with Polyethylene (LDPE) Waterproof Lining",
+    image: "./assets/images/plastic_bottle.jpg",
+    instructions: "Empty any lingering liquid. Because takeaway paper cups contain an inner plastic coating, segregate plastic lids separately.",
+    biodegradable: false
+  },
+  {
+    id: "apple-core",
+    name: "Fresh Fruit & Vegetable Scraps",
+    category: "Biodegradable",
+    binType: "Green Bin",
+    binClass: "bin-green",
+    binIcon: "🍎",
+    binColorName: "Green Bin (Wet / Compostable Waste)",
+    material: "Organic Kitchen Waste",
+    image: "./assets/images/banana_peel.jpg",
+    instructions: "Toss into the green bin for municipal biogas generation or kitchen aerobic composting.",
+    biodegradable: true
   }
 ];
 
-export const FAQ_DATA = [
+// Engaging, Real-World Eco-Facts & Daily Cleanliness Advice
+export const ECO_FACTS_DATABASE = [
   {
-    id: "faq-1",
-    question: "How do I segregate Wet Waste (Geela) from Dry Waste (Sookha)?",
-    answer: "Wet waste (Green Bin) includes vegetable peels, fruit scraps, cooked food leftovers, tea leaves, and egg shells. Dry waste (Blue Bin) includes plastic bottles, rinsed milk packets, cardboard boxes, newspapers, tetra packs, and aluminum cans. Never mix them!"
+    id: "fact-1",
+    tag: "Circular Economy",
+    title: "The 450-Year Plastic Timeline",
+    text: "A single PET plastic bottle takes between 450 to 500 years to decompose in nature. In sunlight, it fragments into microscopic particles (microplastics) that contaminate water and soil. Segregating into the Blue Bin ensures it is mechanically shredded into fresh polyester fibers instead!",
+    icon: "🧴"
   },
   {
-    id: "faq-2",
-    question: "How should I dispose of plastic milk packets and oil pouches?",
-    answer: "When cutting open a milk or oil packet, make a small slit without detaching the small corner tip (detached plastic chips slip through recycling screens into waterways). Rinse the packet with cold water, let it dry, and place it in the dry recycling bin."
+    id: "fact-2",
+    tag: "Landfill Science",
+    title: "Why Wet Waste Must Stay Green",
+    text: "When organic wet waste (vegetable peels, leftover food) is dumped into landfills mixed with plastics, it gets buried without oxygen (anaerobic state), creating methane—a greenhouse gas 28x more potent than carbon dioxide. Segregating wet waste into the Green Bin allows clean composting into fertilizer.",
+    icon: "🌱"
   },
   {
-    id: "faq-3",
-    question: "Are roadside chai paper cups recyclable?",
-    answer: "Most disposable paper tea/coffee cups contain an inner microscopic plastic (LDPE) waterproofing film. Because of this coating and beverage residue, they cannot be recycled with plain paper. Avoid single-use cups by carrying a reusable steel tumbler (Kulhad or thermos)!"
+    id: "fact-3",
+    tag: "Clean Habits",
+    title: "The Milk Pouch Corner Trick",
+    text: "When opening a milk or oil packet, make a small horizontal cut without fully severing the small corner tip. Small detached plastic triangles slip through municipal sorting sieves and wash into rivers. Keeping the corner attached allows the entire pouch to be recycled together!",
+    icon: "✂️"
   },
   {
-    id: "faq-4",
-    question: "What is the official EcoScan support email & helpline?",
-    answer: "You can reach our official team directly at ecoscan123@gmail.com or call our toll-free support helpline at +91 1800-267-3267."
+    id: "fact-4",
+    tag: "Material Miracle",
+    title: "The Infinite Life of Aluminum",
+    text: "Aluminum is 100% and infinitely recyclable without losing its structural properties. In fact, nearly 75% of all aluminum ever produced in human history is still in productive use today! Recycling one soda can saves enough electricity to run a TV for 3 hours.",
+    icon: "⚡"
   },
   {
-    id: "faq-5",
-    question: "Do I need to pay or provide an API key to use EcoScan?",
-    answer: "No, EcoScan AI is completely free to test. It runs locally in your web browser with zero paid API keys or external authentication services."
+    id: "fact-5",
+    tag: "Urban Cleanliness",
+    title: "The 10-Second Container Rinse",
+    text: "Recyclables do not need to be dishwashed with soap, but a quick 10-second water swirl to remove oil and sugar residues stops foul odors and prevents entire truckloads of dry cardboard from being contaminated and sent to the incinerator.",
+    icon: "💧"
+  },
+  {
+    id: "fact-6",
+    tag: "Zero-Waste Home",
+    title: "Turning Waste into Black Gold",
+    text: "Over 50% of typical household waste is organic and compostable. Composting fruit peels, egg shells, and used coffee grounds at home produces nutrient-rich organic fertilizer that naturally restores topsoil vitality and eliminates the need for chemical fertilizers.",
+    icon: "🪴"
   }
 ];

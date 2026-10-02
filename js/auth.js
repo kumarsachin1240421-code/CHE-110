@@ -3,7 +3,7 @@
  * Local form handling with client state. Zero external secrets.
  */
 
-export function initAuth(showToast) {
+export function initAuth(showToast, onAuthSuccess) {
   const loginTabBtn = document.getElementById('tab-login');
   const signupTabBtn = document.getElementById('tab-signup');
   const authForm = document.getElementById('auth-form');
@@ -12,6 +12,8 @@ export function initAuth(showToast) {
   const signupFieldsWrap = document.getElementById('signup-fields-wrap');
   const authSwitchLink = document.getElementById('auth-switch-link');
   const forgotPasswordLink = document.getElementById('forgot-password-link');
+  const nameInput = document.getElementById('name-input');
+  const emailInput = document.getElementById('email-input');
   const passwordInput = document.getElementById('password-input');
   const passwordToggleBtn = document.getElementById('password-toggle-btn');
   const eyeIcon = document.getElementById('eye-icon');
@@ -26,6 +28,8 @@ export function initAuth(showToast) {
       if (authTitle) authTitle.textContent = 'Welcome back';
       if (authSubmitBtn) authSubmitBtn.textContent = 'Log in';
       if (signupFieldsWrap) signupFieldsWrap.style.display = 'none';
+      if (emailInput) emailInput.placeholder = 'example@gmail.com';
+      if (passwordInput) passwordInput.placeholder = 'enter your password';
       if (authSwitchLink) {
         authSwitchLink.innerHTML = '<span class="auth-switch-text">New here? <a id="switch-to-signup">Create an account</a></span>';
       }
@@ -35,6 +39,9 @@ export function initAuth(showToast) {
       if (authTitle) authTitle.textContent = 'Create your account';
       if (authSubmitBtn) authSubmitBtn.textContent = 'Create account';
       if (signupFieldsWrap) signupFieldsWrap.style.display = 'flex';
+      if (nameInput) nameInput.placeholder = 'enter your name';
+      if (emailInput) emailInput.placeholder = 'example@gmail.com';
+      if (passwordInput) passwordInput.placeholder = 'enter your password';
       if (authSwitchLink) {
         authSwitchLink.innerHTML = '<span class="auth-switch-text">Already have an account? <a id="switch-to-login">Log in</a></span>';
       }
@@ -97,12 +104,47 @@ export function initAuth(showToast) {
       setTimeout(() => {
         authSubmitBtn.disabled = false;
         authSubmitBtn.textContent = currentMode === 'login' ? 'Log in' : 'Create account';
+
+        // Retrieve existing user or create clean user profile
+        let existingUser = null;
+        try {
+          existingUser = JSON.parse(localStorage.getItem('ecoscan_current_user') || 'null');
+        } catch {}
+
+        let displayName = '';
+        if (currentMode === 'signup') {
+          displayName = nameInput?.value.trim() || 'Eco Member';
+        } else {
+          displayName = (existingUser && existingUser.email === email && existingUser.name)
+            ? existingUser.name
+            : email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1);
+        }
+
+        const user = {
+          id: existingUser?.id || 'usr_' + Date.now(),
+          name: displayName,
+          email: email,
+          avatar: existingUser?.avatar || null,
+          points: existingUser?.points ?? 0,
+          sorts: existingUser?.sorts ?? 0,
+          scans: existingUser?.scans ?? 0,
+          history: existingUser?.history || [],
+          recentScans: existingUser?.recentScans || [],
+          isLoggedIn: true
+        };
+
+        localStorage.setItem('ecoscan_current_user', JSON.stringify(user));
+
         showToast(
-          currentMode === 'login' ? 'Welcome back!' : 'Account Created!',
-          `Simulated session active for ${email}.`,
+          currentMode === 'login' ? `Welcome back, ${displayName}!` : `Account Created!`,
+          `Logged into your EcoScan AI Dashboard.`,
           'success'
         );
-      }, 500);
+
+        if (typeof onAuthSuccess === 'function') {
+          onAuthSuccess(user);
+        }
+      }, 400);
     });
   }
 

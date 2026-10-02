@@ -1,12 +1,15 @@
 /**
  * EcoScan AI - Master Application Controller
- * Smooth scroll, Support modal, Indian sample reviews, and Right-Downside FAQ widget.
+ * Full-Stack Workflow: Public Landing Page, Community Reviews (Dynamic Likes & Sorting),
+ * and Authenticated Dashboard (Scanner, Gamification Badges, Facts & Review Submission).
  */
 
-import { DEMO_REVIEWS, FAQ_DATA } from './mockData.js';
+import { WASTE_ITEMS_DATABASE, ECO_FACTS_DATABASE } from './mockData.js';
 import { initAuth } from './auth.js';
 
+// ============================================================================
 // Global Toast System
+// ============================================================================
 export function showToast(title, msg, type = 'info') {
   const container = document.getElementById('toast-container');
   if (!container) return;
@@ -17,12 +20,13 @@ export function showToast(title, msg, type = 'info') {
   let icon = '🌿';
   if (type === 'warning') icon = '⚠️';
   if (type === 'info') icon = 'ℹ️';
+  if (type === 'success') icon = '⭐';
 
   toast.innerHTML = `
     <div class="toast-icon">${icon}</div>
     <div class="toast-content">
-      <div class="toast-title">${title}</div>
-      <div class="toast-msg">${msg}</div>
+      <div class="toast-title">${escapeHtml(title)}</div>
+      <div class="toast-msg">${escapeHtml(msg)}</div>
     </div>
   `;
 
@@ -35,12 +39,150 @@ export function showToast(title, msg, type = 'info') {
   }, 3600);
 }
 
+// ============================================================================
+// LocalStorage Keys
+// ============================================================================
+const REVIEWS_STORAGE_KEY = 'ecoscan_user_reviews';
+const LIKED_REVIEWS_KEY = 'ecoscan_liked_reviews';
+const USER_STORAGE_KEY = 'ecoscan_current_user';
+
+function getStoredReviews() {
+  try {
+    const raw = localStorage.getItem(REVIEWS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveReviews(reviews) {
+  localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(reviews));
+}
+
+function getLikedReviewIds() {
+  try {
+    const raw = localStorage.getItem(LIKED_REVIEWS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLikedReviewIds(ids) {
+  localStorage.setItem(LIKED_REVIEWS_KEY, JSON.stringify(ids));
+}
+
+function getCurrentUser() {
+  try {
+    const raw = localStorage.getItem(USER_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCurrentUser(user) {
+  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+}
+
+// ============================================================================
+// Gamification & Badges Engine (5 Tiers)
+// ============================================================================
+const BADGE_TIERS = [
+  {
+    level: 1,
+    name: 'Eco Seedling',
+    minPoints: 0,
+    icon: '🌱',
+    reqText: '0 - 40 Eco-Points',
+    desc: 'Began the journey of conscious waste sorting and environmental awareness.'
+  },
+  {
+    level: 2,
+    name: 'Green Scout',
+    minPoints: 50,
+    icon: '🌿',
+    reqText: '50 - 90 Eco-Points',
+    desc: 'Demonstrated consistent waste segregation habits across multiple items.'
+  },
+  {
+    level: 3,
+    name: 'Earth Guardian',
+    minPoints: 100,
+    icon: '🛡️',
+    reqText: '100 - 190 Eco-Points',
+    desc: 'Safeguarding community cleanliness with 10+ verified bin deposits.'
+  },
+  {
+    level: 4,
+    name: 'Forest Ranger',
+    minPoints: 200,
+    icon: '🌲',
+    reqText: '200 - 340 Eco-Points',
+    desc: 'Master of recycling circularity and source segregation best practices.'
+  },
+  {
+    level: 5,
+    name: 'Planet Champion',
+    minPoints: 350,
+    icon: '🌍',
+    reqText: '350+ Eco-Points',
+    desc: 'Zero-waste hero inspiring everyday cleanliness and eco-action.'
+  }
+];
+
+function getUserBadge(points = 0) {
+  let activeBadge = BADGE_TIERS[0];
+  for (let i = BADGE_TIERS.length - 1; i >= 0; i--) {
+    if (points >= BADGE_TIERS[i].minPoints) {
+      activeBadge = BADGE_TIERS[i];
+      break;
+    }
+  }
+  return activeBadge;
+}
+
+function getNextBadgeInfo(points = 0) {
+  const currentBadge = getUserBadge(points);
+  const nextBadge = BADGE_TIERS.find(b => b.minPoints > points);
+
+  if (!nextBadge) {
+    return {
+      current: currentBadge,
+      next: null,
+      pointsNeeded: 0,
+      percentage: 100,
+      text: 'Max level unlocked! You are a Planet Champion.'
+    };
+  }
+
+  const range = nextBadge.minPoints - currentBadge.minPoints;
+  const progressInTier = points - currentBadge.minPoints;
+  const percentage = Math.min(100, Math.max(0, Math.round((progressInTier / range) * 100)));
+  const pointsRemaining = nextBadge.minPoints - points;
+
+  return {
+    current: currentBadge,
+    next: nextBadge,
+    pointsNeeded: pointsRemaining,
+    percentage: percentage,
+    text: `${pointsRemaining} points needed to unlock Level ${nextBadge.level}: ${nextBadge.name}`
+  };
+}
+
+// ============================================================================
+// DOM Initialization
+// ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
-  // Prevent any automatic hash scroll jump on initial load
+  // Prevent any automatic hash jump on load
   if (window.location.hash === '#reviews') {
     history.replaceState(null, '', window.location.pathname);
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }
+
+  // Views
+  const welcomePage = document.getElementById('welcome-page');
+  const dashboardPage = document.getElementById('dashboard-page');
 
   // Support Modal Elements
   const btnSupport = document.getElementById('nav-btn-support');
@@ -71,168 +213,1208 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Reviews Nav Link: Smooth Scroll Down
-  const navLinkReviews = document.getElementById('nav-link-reviews');
-  if (navLinkReviews) {
-    navLinkReviews.addEventListener('click', (e) => {
-      e.preventDefault();
-      const reviewsSection = document.getElementById('reviews');
-      if (reviewsSection) {
-        reviewsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-  }
-
-  // Right Downside FAQ Widget
-  const btnFaqToggle = document.getElementById('btn-faq-toggle');
-  const faqDrawer = document.getElementById('faq-drawer');
-  const faqDrawerClose = document.getElementById('faq-drawer-close');
-  const faqListContainer = document.getElementById('faq-list-container');
-
-  function toggleFaqDrawer() {
-    if (faqDrawer) {
-      faqDrawer.classList.toggle('active');
-    }
-  }
-
-  function closeFaqDrawer() {
-    if (faqDrawer) {
-      faqDrawer.classList.remove('active');
-    }
-  }
-
-  if (btnFaqToggle) btnFaqToggle.addEventListener('click', toggleFaqDrawer);
-  if (faqDrawerClose) faqDrawerClose.addEventListener('click', closeFaqDrawer);
-
-  // Populate FAQ list with accordion behavior
-  if (faqListContainer) {
-    faqListContainer.innerHTML = '';
-    FAQ_DATA.forEach((faq, index) => {
-      const item = document.createElement('div');
-      item.className = `faq-item ${index === 0 ? 'open' : ''}`;
-      item.innerHTML = `
-        <button type="button" class="faq-question-btn" aria-expanded="${index === 0}">
-          <span>${faq.question}</span>
-          <span class="faq-chevron">▼</span>
-        </button>
-        <div class="faq-answer">
-          ${faq.answer}
-        </div>
-      `;
-
-      const btn = item.querySelector('.faq-question-btn');
-      btn.addEventListener('click', () => {
-        const isOpen = item.classList.contains('open');
-        // Close siblings
-        faqListContainer.querySelectorAll('.faq-item').forEach(other => other.classList.remove('open'));
-        if (!isOpen) {
-          item.classList.add('open');
-        }
-      });
-
-      faqListContainer.appendChild(item);
-    });
-  }
-
   // Global Escape Key Listener
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (supportModal && supportModal.classList.contains('active')) {
         closeSupportModal();
       }
-      if (faqDrawer && faqDrawer.classList.contains('active')) {
-        closeFaqDrawer();
-      }
     }
   });
 
-  // Initialize Indian Sample Reviews Carousel
-  initReviewsCarousel();
+  // Brand Logo: Smooth scroll to top of hero
+  const brandLogo = document.querySelector('.brand-logo-wrap');
+  if (brandLogo) {
+    brandLogo.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
 
-  // Initialize Auth Controller
-  initAuth(showToast);
+  // ==========================================================================
+  // PART 1: PUBLIC LANDING PAGE & COMMUNITY REVIEWS
+  // ==========================================================================
+  const navLinkReviews = document.getElementById('nav-link-reviews');
+  const reviewsSection = document.getElementById('reviews');
+  const reviewsDisplayArea = document.getElementById('reviews-display-area');
+  const reviewsCountBadge = document.getElementById('reviews-count-badge');
+
+  function renderPublicReviews() {
+    const reviews = getStoredReviews();
+    const likedIds = getLikedReviewIds();
+    const currentUser = getCurrentUser();
+
+    // Update count badge
+    if (reviewsCountBadge) {
+      reviewsCountBadge.textContent = `${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'}`;
+    }
+
+    if (!reviewsDisplayArea) return;
+
+    // Requirement: Empty State if no real reviews exist: "No reviews yet."
+    if (reviews.length === 0) {
+      reviewsDisplayArea.innerHTML = `
+        <div class="reviews-empty-state">
+          <p class="empty-reviews-text">No reviews yet.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Requirement: Dynamically sort reviews by like count in descending order (highest-liked review sits at 1st position)
+    reviews.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+
+    let html = '<div class="reviews-grid">';
+    reviews.forEach(r => {
+      const starsStr = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+      const initial = (r.name || 'User').charAt(0).toUpperCase();
+      const isLiked = likedIds.includes(r.id);
+      const isAuthor = currentUser && (
+        (r.email && currentUser.email && r.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+        (!r.email && r.name && currentUser.name && r.name.toLowerCase() === currentUser.name.toLowerCase())
+      );
+
+      const avatarMarkup = r.avatar
+        ? `<img src="${r.avatar}" alt="${escapeHtml(r.name)}" class="avatar-photo">`
+        : initial;
+
+      html += `
+        <div class="user-review-card" id="${r.id}">
+          <div class="user-review-card-top">
+            <div class="user-review-stars" aria-label="${r.rating} stars">${starsStr}</div>
+            <div class="user-review-date">${r.date || 'Recent'}</div>
+          </div>
+          <p class="user-review-quote">“${escapeHtml(r.text)}”</p>
+          <div class="user-review-author-wrap">
+            <div class="author-identity">
+              <div class="user-avatar-circle">${avatarMarkup}</div>
+              <div class="author-name-text">${escapeHtml(r.name)}</div>
+            </div>
+            <!-- Like Button with Counter -->
+            <button type="button" class="btn-review-like ${isLiked ? 'liked' : ''}" data-review-id="${r.id}" title="${isLiked ? 'Unlike review' : 'Like review'}">
+              <span class="like-icon">${isLiked ? '❤️' : '🤍'}</span>
+              <span class="like-count">${r.likes || 0}</span>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+
+    reviewsDisplayArea.innerHTML = html;
+
+    // Attach Like Button Listeners (Public users can ONLY read and like reviews)
+    reviewsDisplayArea.querySelectorAll('.btn-review-like').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const reviewId = btn.getAttribute('data-review-id');
+        handleToggleReviewLike(reviewId);
+      });
+    });
+  }
+
+  function handleToggleReviewLike(reviewId) {
+    const reviews = getStoredReviews();
+    const target = reviews.find(r => r.id === reviewId);
+    if (!target) return;
+
+    let likedIds = getLikedReviewIds();
+    if (likedIds.includes(reviewId)) {
+      // Unlike
+      target.likes = Math.max(0, (target.likes || 1) - 1);
+      likedIds = likedIds.filter(id => id !== reviewId);
+    } else {
+      // Like
+      target.likes = (target.likes || 0) + 1;
+      likedIds.push(reviewId);
+    }
+
+    saveReviews(reviews);
+    saveLikedReviewIds(likedIds);
+    renderPublicReviews(); // Re-sorts dynamically so highest-liked jumps to 1st!
+    renderFactsTabReviews();
+  }
+
+  function handleDeleteReview(reviewId) {
+    if (!confirm('Are you sure you want to delete this review?')) return;
+    let reviews = getStoredReviews();
+    reviews = reviews.filter(r => r.id !== reviewId);
+    saveReviews(reviews);
+    renderPublicReviews();
+    renderFactsTabReviews();
+    showToast('Review Deleted', 'Your review has been permanently removed.', 'info');
+  }
+
+  // Navbar "Reviews" link toggle/display
+  if (navLinkReviews) {
+    navLinkReviews.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!welcomePage || !reviewsSection) return;
+
+      const isHidden = reviewsSection.style.display === 'none' || !reviewsSection.style.display;
+      if (isHidden) {
+        welcomePage.classList.add('show-reviews');
+        reviewsSection.style.display = 'block';
+        reviewsSection.classList.add('active');
+        renderPublicReviews();
+        requestAnimationFrame(() => {
+          reviewsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      } else {
+        welcomePage.classList.remove('show-reviews');
+        reviewsSection.style.display = 'none';
+        reviewsSection.classList.remove('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  }
+
+  // Initial render of public reviews
+  renderPublicReviews();
+
+  // ==========================================================================
+  // PART 2: AUTHENTICATED DASHBOARD (POST-LOGIN)
+  // ==========================================================================
+  
+  // Dashboard Elements
+  const dashBrandBtn = document.getElementById('dash-brand-btn');
+  const dashBtnViewPublic = document.getElementById('dash-btn-view-public');
+  const dashBtnLogout = document.getElementById('dash-btn-logout');
+
+  // Sidebar User Info
+  const dashUserAvatar = document.getElementById('dash-user-avatar');
+  const dashUserName = document.getElementById('dash-user-name');
+  const dashUserBadgeLabel = document.getElementById('dash-user-badge-label');
+  const dashPointsCount = document.getElementById('dash-points-count');
+  const dashHeaderTitle = document.getElementById('dash-header-title');
+  const dashHeaderSubtitle = document.getElementById('dash-header-subtitle');
+
+  // Tabs
+  const tabBtnHome = document.getElementById('dash-tab-btn-home');
+  const tabBtnProgress = document.getElementById('dash-tab-btn-progress');
+  const tabBtnFacts = document.getElementById('dash-tab-btn-facts');
+
+  const paneHome = document.getElementById('dash-pane-home');
+  const paneProgress = document.getElementById('dash-pane-progress');
+  const paneFacts = document.getElementById('dash-pane-facts');
+
+  const allTabBtns = [tabBtnHome, tabBtnProgress, tabBtnFacts];
+  const allPanes = [paneHome, paneProgress, paneFacts];
+
+  function switchDashboardTab(tabName) {
+    allTabBtns.forEach(btn => {
+      if (btn) {
+        const isActive = btn.getAttribute('data-tab') === tabName;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      }
+    });
+
+    allPanes.forEach(pane => {
+      if (pane) {
+        const isMatch = pane.id === `dash-pane-${tabName}`;
+        pane.classList.toggle('active', isMatch);
+      }
+    });
+
+    if (tabName === 'home') {
+      if (dashHeaderTitle) dashHeaderTitle.textContent = 'Waste Scanner & Classification';
+      if (dashHeaderSubtitle) dashHeaderSubtitle.textContent = 'Analyze items and discover designated segregation bins';
+      render24hScans();
+    } else if (tabName === 'progress') {
+      if (dashHeaderTitle) dashHeaderTitle.textContent = 'Milestone & Gamification Progress';
+      if (dashHeaderSubtitle) dashHeaderSubtitle.textContent = 'Track points, unlock achievement badges, and review sorted history';
+      renderProgressTab();
+    } else if (tabName === 'facts') {
+      if (dashHeaderTitle) dashHeaderTitle.textContent = 'Environmental Facts & Advice';
+      if (dashHeaderSubtitle) dashHeaderSubtitle.textContent = 'Practical daily cleanliness habits and community reviews';
+      renderFactsTab();
+      renderFactsTabReviews();
+    }
+  }
+
+  if (tabBtnHome) tabBtnHome.addEventListener('click', () => switchDashboardTab('home'));
+  if (tabBtnProgress) tabBtnProgress.addEventListener('click', () => switchDashboardTab('progress'));
+  if (tabBtnFacts) tabBtnFacts.addEventListener('click', () => switchDashboardTab('facts'));
+
+  // Switch between Public and Dashboard
+  function showDashboardView(user) {
+    if (welcomePage) welcomePage.style.display = 'none';
+    if (dashboardPage) dashboardPage.style.display = 'flex';
+    updateDashboardUserProfile(user);
+    switchDashboardTab('home');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function showPublicView() {
+    if (dashboardPage) dashboardPage.style.display = 'none';
+    if (welcomePage) {
+      welcomePage.style.display = 'flex';
+      welcomePage.classList.remove('show-reviews');
+    }
+    if (reviewsSection) reviewsSection.style.display = 'none';
+    renderPublicReviews();
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  if (dashBtnLogout) {
+    dashBtnLogout.addEventListener('click', () => {
+      const user = getCurrentUser();
+      if (user) {
+        user.isLoggedIn = false;
+        saveCurrentUser(user);
+      }
+      showToast('Logged Out', 'You have returned to the public landing page.', 'info');
+      showPublicView();
+    });
+  }
+
+  if (dashBtnViewPublic) dashBtnViewPublic.addEventListener('click', showPublicView);
+  if (dashBrandBtn) dashBrandBtn.addEventListener('click', showPublicView);
+
+  function updateDashboardUserProfile(user) {
+    if (!user) return;
+    const name = user.name || 'Eco Member';
+    const initial = name.charAt(0).toUpperCase();
+    const badge = getUserBadge(user.points || 0);
+
+    const dashUserAvatarText = document.getElementById('dash-user-avatar-text');
+    const dashUserAvatarImg = document.getElementById('dash-user-avatar-img');
+
+    if (user.avatar) {
+      if (dashUserAvatarImg) {
+        dashUserAvatarImg.src = user.avatar;
+        dashUserAvatarImg.style.display = 'block';
+      }
+      if (dashUserAvatarText) dashUserAvatarText.style.display = 'none';
+    } else {
+      if (dashUserAvatarImg) dashUserAvatarImg.style.display = 'none';
+      if (dashUserAvatarText) {
+        dashUserAvatarText.textContent = initial;
+        dashUserAvatarText.style.display = 'block';
+      }
+    }
+
+    if (dashUserName) dashUserName.textContent = name;
+    if (dashUserBadgeLabel) dashUserBadgeLabel.textContent = `${badge.icon} ${badge.name}`;
+    if (dashPointsCount) dashPointsCount.textContent = user.points || 0;
+
+    const dashReviewAuthorName = document.getElementById('dash-review-author-name');
+    if (dashReviewAuthorName) dashReviewAuthorName.textContent = name;
+  }
+
+  // ==========================================================================
+  // PROFILE PICTURE SETUP (Camera & Upload)
+  // ==========================================================================
+  function initAvatarManagement() {
+    const dashUserCard = document.getElementById('dash-user-card');
+    const dashUserAvatar = document.getElementById('dash-user-avatar');
+    const avatarModal = document.getElementById('avatar-modal');
+    const avatarModalClose = document.getElementById('avatar-modal-close');
+    const btnAvatarTakePhoto = document.getElementById('btn-avatar-take-photo');
+    const btnAvatarUploadPhoto = document.getElementById('btn-avatar-upload-photo');
+    const avatarFileInput = document.getElementById('avatar-file-input');
+    const avatarCameraContainer = document.getElementById('avatar-camera-container');
+    const avatarOptionsContainer = document.getElementById('avatar-options-container');
+    const avatarCameraVideo = document.getElementById('avatar-camera-video');
+    const btnAvatarSnap = document.getElementById('btn-avatar-snap');
+    const btnAvatarCancelCam = document.getElementById('btn-avatar-cancel-cam');
+    const btnAvatarRemovePhoto = document.getElementById('btn-avatar-remove-photo');
+
+    let camStream = null;
+
+    function openAvatarModal() {
+      const user = getCurrentUser();
+      if (btnAvatarRemovePhoto) {
+        btnAvatarRemovePhoto.style.display = (user && user.avatar) ? 'flex' : 'none';
+      }
+      if (avatarModal) avatarModal.style.display = 'flex';
+    }
+
+    function closeAvatarModal() {
+      stopCamera();
+      if (avatarModal) avatarModal.style.display = 'none';
+    }
+
+    function stopCamera() {
+      if (camStream) {
+        camStream.getTracks().forEach(t => t.stop());
+        camStream = null;
+      }
+      if (avatarCameraContainer) avatarCameraContainer.style.display = 'none';
+      if (avatarOptionsContainer) avatarOptionsContainer.style.display = 'flex';
+      if (avatarCameraVideo) avatarCameraVideo.srcObject = null;
+    }
+
+    // Make avatar profile section in the bottom of the sidebar clickable
+    if (dashUserCard) {
+      dashUserCard.addEventListener('click', openAvatarModal);
+      dashUserCard.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openAvatarModal();
+        }
+      });
+    }
+    if (dashUserAvatar) dashUserAvatar.addEventListener('click', openAvatarModal);
+    if (avatarModalClose) avatarModalClose.addEventListener('click', closeAvatarModal);
+    if (avatarModal) {
+      avatarModal.addEventListener('click', (e) => {
+        if (e.target === avatarModal) closeAvatarModal();
+      });
+    }
+
+    // "Take photo" with device camera
+    if (btnAvatarTakePhoto) {
+      btnAvatarTakePhoto.addEventListener('click', async () => {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          try {
+            camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            if (avatarCameraVideo) {
+              avatarCameraVideo.srcObject = camStream;
+              avatarCameraVideo.play();
+            }
+            if (avatarOptionsContainer) avatarOptionsContainer.style.display = 'none';
+            if (avatarCameraContainer) avatarCameraContainer.style.display = 'block';
+          } catch (err) {
+            showToast('Camera Unavailable', 'Unable to access camera. Please try "Upload photo" instead.', 'warning');
+          }
+        } else {
+          showToast('Camera Unsupported', 'Your browser does not support camera access.', 'warning');
+        }
+      });
+    }
+
+    if (btnAvatarCancelCam) {
+      btnAvatarCancelCam.addEventListener('click', stopCamera);
+    }
+
+    // "Snap Photo"
+    if (btnAvatarSnap) {
+      btnAvatarSnap.addEventListener('click', () => {
+        if (!avatarCameraVideo) return;
+        const canvas = document.createElement('canvas');
+        const size = Math.min(avatarCameraVideo.videoWidth || 300, avatarCameraVideo.videoHeight || 300);
+        canvas.width = 300;
+        canvas.height = 300;
+        const ctx = canvas.getContext('2d');
+
+        const sx = ((avatarCameraVideo.videoWidth || 300) - size) / 2;
+        const sy = ((avatarCameraVideo.videoHeight || 300) - size) / 2;
+        ctx.drawImage(avatarCameraVideo, sx, sy, size, size, 0, 0, 300, 300);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        applyNewAvatar(dataUrl);
+        stopCamera();
+        closeAvatarModal();
+      });
+    }
+
+    // "Upload photo"
+    if (btnAvatarUploadPhoto && avatarFileInput) {
+      btnAvatarUploadPhoto.addEventListener('click', () => {
+        avatarFileInput.click();
+      });
+
+      avatarFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 300;
+            canvas.height = 300;
+            const ctx = canvas.getContext('2d');
+            const size = Math.min(img.width, img.height);
+            const sx = (img.width - size) / 2;
+            const sy = (img.height - size) / 2;
+            ctx.drawImage(img, sx, sy, size, size, 0, 0, 300, 300);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            applyNewAvatar(dataUrl);
+            closeAvatarModal();
+          };
+          img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // "Remove custom photo"
+    if (btnAvatarRemovePhoto) {
+      btnAvatarRemovePhoto.addEventListener('click', () => {
+        applyNewAvatar(null);
+        closeAvatarModal();
+      });
+    }
+
+    function applyNewAvatar(dataUrl) {
+      const user = getCurrentUser();
+      if (!user) return;
+      user.avatar = dataUrl;
+      saveCurrentUser(user);
+
+      // Update authored reviews
+      const reviews = getStoredReviews();
+      reviews.forEach(r => {
+        if ((user.id && r.userId && r.userId === user.id) ||
+            (user.email && r.email && r.email.toLowerCase() === user.email.toLowerCase()) ||
+            (!r.email && r.name && user.name && r.name.toLowerCase() === user.name.toLowerCase())) {
+          r.avatar = dataUrl;
+        }
+      });
+      saveReviews(reviews);
+
+      updateDashboardUserProfile(user);
+      renderPublicReviews();
+      renderFactsTabReviews();
+
+      if (dataUrl) {
+        showToast('Profile Photo Updated! 📸', 'Your new custom avatar is active across your profile and reviews.', 'success');
+      } else {
+        showToast('Photo Removed', 'Reverted to default letter badge.', 'info');
+      }
+    }
+  }
+
+  initAvatarManagement();
+
+  // ==========================================================================
+  // TAB 1: HOME (Waste Scanner & Classification)
+  // ==========================================================================
+  const scannerVideo = document.getElementById('scanner-video');
+  const scannerPreviewImg = document.getElementById('scanner-preview-img');
+  const scannerViewport = document.getElementById('scanner-viewport');
+  const scannerStatusBadge = document.getElementById('scanner-status-badge');
+  const btnTakePhoto = document.getElementById('btn-take-photo');
+  const btnUploadPhoto = document.getElementById('btn-upload-photo');
+  const scannerFileInput = document.getElementById('scanner-file-input');
+
+  const resultItemName = document.getElementById('result-item-name');
+  const resultCategoryBadge = document.getElementById('result-category-badge');
+  const dustbinCallout = document.getElementById('dustbin-callout');
+  const dustbinIconWrap = document.getElementById('dustbin-icon-wrap');
+  const dustbinName = document.getElementById('dustbin-name');
+  const dustbinDesc = document.getElementById('dustbin-desc');
+  const disposalAdviceText = document.getElementById('disposal-advice-text');
+  const btnConfirmSort = document.getElementById('btn-confirm-sort');
+
+  let currentActiveItem = WASTE_ITEMS_DATABASE[0]; // Default Plastic Bottle
+  let isMediaStreamActive = false;
+
+  // Helper to convert an image URL or image element to base64 data URL
+  async function fetchImageAsBase64(url) {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  // Helper to capture a frame from video element
+  function captureVideoFrame(videoEl) {
+    const canvas = document.createElement('canvas');
+    canvas.width = videoEl.videoWidth || 640;
+    canvas.height = videoEl.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.85);
+  }
+
+  // ==========================================================================
+  // 24-HOUR EPHEMERAL HISTORY ENGINE
+  // ==========================================================================
+  const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+  function getValid24hScans(user) {
+    if (!user) user = getCurrentUser();
+    if (!user || !Array.isArray(user.recentScans)) return [];
+    const cutoff = Date.now() - TWENTY_FOUR_HOURS_MS;
+    // Automatically filter out and delete items older than 24 hours from storage
+    const valid = user.recentScans.filter(s => (s.scannedAt && s.scannedAt > cutoff));
+    if (valid.length !== user.recentScans.length) {
+      user.recentScans = valid;
+      saveCurrentUser(user);
+    }
+    return valid;
+  }
+
+  function addScanTo24hHistory(item) {
+    let user = getCurrentUser() || { name: 'Eco Member', email: 'user@ecoscan.ai' };
+    const cutoff = Date.now() - TWENTY_FOUR_HOURS_MS;
+    const current = (user.recentScans || []).filter(s => s.scannedAt && s.scannedAt > cutoff);
+
+    const newScan = {
+      id: 'scan_' + Date.now(),
+      scannedAt: Date.now(),
+      itemName: item.name,
+      category: item.category,
+      biodegradable: item.biodegradable,
+      binColorName: item.binColorName || (item.biodegradable ? 'Green Bin (Organic/Wet Waste)' : 'Blue Bin (Dry/Recyclable)'),
+      binClass: item.binClass || (item.biodegradable ? 'bin-green' : 'bin-blue'),
+      binIcon: item.binIcon || (item.biodegradable ? '🌱' : '🗑️'),
+      timeText: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    current.unshift(newScan);
+    user.recentScans = current;
+    saveCurrentUser(user);
+    render24hScans();
+  }
+
+  function render24hScans() {
+    const container = document.getElementById('recent-scans-container');
+    const countBadge = document.getElementById('recent-scans-count');
+    if (!container) return;
+
+    const user = getCurrentUser();
+    const scans = getValid24hScans(user);
+
+    if (countBadge) {
+      countBadge.textContent = `${scans.length} ${scans.length === 1 ? 'item' : 'items'}`;
+    }
+
+    if (scans.length === 0) {
+      container.innerHTML = `
+        <div class="scans-empty-state">
+          <span>🌿 No scans in the past 24 hours. Take or upload a photo to identify waste!</span>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '<div class="recent-scans-grid">';
+    scans.forEach(s => {
+      const isBio = s.biodegradable;
+      html += `
+        <div class="recent-scan-chip ${s.binClass || (isBio ? 'bin-green' : 'bin-blue')}">
+          <div class="recent-scan-icon">${s.binIcon || (isBio ? '🌱' : '🗑️')}</div>
+          <div class="recent-scan-info">
+            <div class="recent-scan-name">${escapeHtml(s.itemName)}</div>
+            <div class="recent-scan-meta">${isBio ? 'Biodegradable' : 'Non-Biodegradable'} • ${s.timeText}</div>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+  }
+
+  // ==========================================================================
+  // SCANNER & GEMINI CLASSIFICATION ENGINE (LOCKED STATE TO PREVENT FLICKERING)
+  // ==========================================================================
+  let currentScanRequestId = 0;
+  let isScanLocked = false;
+
+  // Applies classification data to UI Result Card
+  function applyClassificationResult(item) {
+    currentActiveItem = item;
+
+    // Update image preview to current analyzed photo
+    if (item.image && scannerPreviewImg) {
+      scannerPreviewImg.src = item.image;
+      scannerPreviewImg.style.display = 'block';
+    }
+    if (scannerVideo) scannerVideo.style.display = 'none';
+
+    // Update Result Card elements
+    if (resultItemName) resultItemName.textContent = item.name;
+
+    if (resultCategoryBadge) {
+      resultCategoryBadge.textContent = item.category;
+      resultCategoryBadge.className = `result-category-badge ${item.biodegradable ? 'badge-biodegradable' : 'badge-non-biodegradable'}`;
+    }
+
+    if (dustbinCallout) {
+      dustbinCallout.className = `dustbin-callout ${item.binClass || (item.biodegradable ? 'bin-green' : 'bin-blue')}`;
+    }
+    if (dustbinIconWrap) dustbinIconWrap.textContent = item.binIcon || (item.biodegradable ? '🌱' : '🗑️');
+    if (dustbinName) dustbinName.textContent = item.binColorName || (item.biodegradable ? 'Green Bin (Organic/Wet Waste)' : 'Blue Bin (Dry/Recyclable)');
+    if (dustbinDesc) dustbinDesc.textContent = item.instructions || item.tip;
+    if (disposalAdviceText) disposalAdviceText.textContent = item.instructions || item.tip;
+
+    // Reset Confirm Sort Button
+    if (btnConfirmSort) {
+      btnConfirmSort.disabled = false;
+      btnConfirmSort.classList.remove('confirmed');
+      btnConfirmSort.innerHTML = '<span>✅</span> I Put This in the Dustbin (Confirm Sort)';
+    }
+
+    // Increment User Scans
+    const user = getCurrentUser();
+    if (user) {
+      user.scans = (user.scans || 0) + 1;
+      saveCurrentUser(user);
+      updateDashboardUserProfile(user);
+    }
+  }
+
+  // Gemini Vision Classifier (/api/classify) with Race Condition / Flashing Fix
+  async function classifyWithGemini(imageDataUrl, mimeType = 'image/jpeg') {
+    const thisScanId = ++currentScanRequestId;
+    isScanLocked = false;
+
+    // Set preview immediately to the captured/uploaded photo
+    if (scannerPreviewImg) {
+      scannerPreviewImg.src = imageDataUrl;
+      scannerPreviewImg.style.display = 'block';
+    }
+    if (scannerVideo) scannerVideo.style.display = 'none';
+
+    // 1. Loading state on the result card
+    if (scannerViewport) {
+      scannerViewport.classList.add('scanning');
+      if (scannerStatusBadge) scannerStatusBadge.textContent = 'Gemini Vision AI Analyzing...';
+    }
+    if (resultItemName) resultItemName.textContent = 'Analyzing with Gemini Vision AI...';
+    if (dustbinDesc) dustbinDesc.textContent = 'Analyzing material composition & municipal segregation rules...';
+    if (resultCategoryBadge) {
+      resultCategoryBadge.textContent = 'Analyzing...';
+      resultCategoryBadge.className = 'result-category-badge';
+    }
+    if (btnConfirmSort) {
+      btnConfirmSort.disabled = true;
+      btnConfirmSort.innerHTML = '<span>⏳</span> Analyzing with Gemini AI...';
+    }
+
+    try {
+      const response = await fetch('/api/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imageDataUrl, mimeType })
+      });
+
+      const res = await response.json();
+
+      // Guard against stale requests / race condition
+      if (thisScanId !== currentScanRequestId) return;
+
+      if (scannerViewport) scannerViewport.classList.remove('scanning');
+      if (scannerStatusBadge) scannerStatusBadge.textContent = 'Classification Ready';
+
+      if (res.success && res.data) {
+        const d = res.data;
+        const isBio = (d.classification || '').toLowerCase().includes('bio') && !(d.classification || '').toLowerCase().includes('non');
+        const isGreen = (d.binColor || '').toLowerCase().includes('green');
+
+        const finalItem = {
+          name: d.itemName || 'Identified Waste',
+          category: isBio ? 'Biodegradable' : 'Non-Biodegradable',
+          biodegradable: isBio,
+          binType: isGreen ? 'Green Bin' : 'Blue Bin',
+          binClass: isGreen ? 'bin-green' : 'bin-blue',
+          binIcon: isGreen ? '🌱' : '🗑️',
+          binColorName: d.binColor || (isGreen ? 'Green Bin (Organic/Wet Waste)' : 'Blue Bin (Dry/Recyclable)'),
+          instructions: d.tip || 'Deposit into designated bin.',
+          material: isBio ? 'Organic Matter' : 'Recyclable Packaging',
+          image: imageDataUrl
+        };
+
+        // Lock final result state so it never flickers or reverts
+        applyClassificationResult(finalItem);
+        addScanTo24hHistory(finalItem);
+        isScanLocked = true;
+
+        showToast('Gemini Vision Classified', `${d.itemName} → ${d.binColor}`, 'success');
+        return;
+      } else if (res.needsKey) {
+        showToast('Gemini Notice', 'GEMINI_API_KEY is empty in .env.local.', 'info');
+      } else {
+        showToast('Classification Notice', res.error || 'Failed to classify.', 'info');
+      }
+    } catch (err) {
+      if (thisScanId !== currentScanRequestId) return;
+      console.warn('Gemini endpoint error:', err);
+      if (scannerViewport) scannerViewport.classList.remove('scanning');
+      if (scannerStatusBadge) scannerStatusBadge.textContent = 'Classification Ready';
+      showToast('Scanner Notice', 'Unable to reach Gemini Vision API. Try uploading photo again.', 'warning');
+    }
+  }
+
+  // "Take Photo" Action wired to /api/classify
+  if (btnTakePhoto) {
+    btnTakePhoto.addEventListener('click', async () => {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !isMediaStreamActive) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+          if (scannerVideo) {
+            scannerVideo.srcObject = stream;
+            scannerVideo.style.display = 'block';
+            scannerVideo.play();
+          }
+          if (scannerPreviewImg) scannerPreviewImg.style.display = 'none';
+          if (scannerStatusBadge) scannerStatusBadge.textContent = 'Camera Live — Tap Take Photo to Capture';
+          isMediaStreamActive = true;
+          btnTakePhoto.innerHTML = '<span>📸</span> Snap Frame';
+
+          const captureHandler = () => {
+            const frameDataUrl = captureVideoFrame(scannerVideo);
+            const tracks = stream.getTracks();
+            tracks.forEach(track => track.stop());
+            isMediaStreamActive = false;
+            btnTakePhoto.innerHTML = '<span>📸</span> Take photo';
+
+            if (scannerVideo) scannerVideo.style.display = 'none';
+            if (scannerPreviewImg) {
+              scannerPreviewImg.src = frameDataUrl;
+              scannerPreviewImg.style.display = 'block';
+            }
+
+            classifyWithGemini(frameDataUrl, 'image/jpeg');
+            btnTakePhoto.removeEventListener('click', captureHandler);
+          };
+
+          btnTakePhoto.addEventListener('click', captureHandler, { once: true });
+          return;
+        } catch {
+          // Camera permission denied or not available -> open file picker instead
+          if (scannerFileInput) scannerFileInput.click();
+          return;
+        }
+      }
+
+      // If camera already active or fallback: prompt file input
+      if (scannerFileInput) scannerFileInput.click();
+    });
+  }
+
+  // "Upload Photo" Action wired to /api/classify
+  if (btnUploadPhoto && scannerFileInput) {
+    btnUploadPhoto.addEventListener('click', () => {
+      scannerFileInput.click();
+    });
+
+    scannerFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const dataUrl = evt.target.result;
+        classifyWithGemini(dataUrl, file.type || 'image/jpeg');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // "I Put This in the Dustbin (Confirm Sort)" Button Action
+  if (btnConfirmSort) {
+    btnConfirmSort.addEventListener('click', () => {
+      let user = getCurrentUser() || { name: 'Eco Member', email: 'guest@ecoscan.ai', points: 0, sorts: 0, scans: 0, history: [] };
+
+      const oldBadge = getUserBadge(user.points || 0);
+
+      // Award +10 points & increment sorts
+      user.points = (user.points || 0) + 10;
+      user.sorts = (user.sorts || 0) + 1;
+
+      // Add to user history
+      const historyEntry = {
+        id: 'sort_' + Date.now(),
+        item: currentActiveItem.name,
+        bin: currentActiveItem.binType,
+        binClass: currentActiveItem.binClass,
+        points: 10,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      };
+      user.history = user.history || [];
+      user.history.unshift(historyEntry);
+
+      saveCurrentUser(user);
+      updateDashboardUserProfile(user);
+
+      // Button state
+      btnConfirmSort.classList.add('confirmed');
+      btnConfirmSort.innerHTML = '<span>🎉</span> Sorted! +10 Eco-Points Earned';
+      btnConfirmSort.disabled = true;
+
+      // Check for level unlock
+      const newBadge = getUserBadge(user.points);
+      if (newBadge.level > oldBadge.level) {
+        showToast('Badge Unlocked! 🏆', `Congratulations! You unlocked ${newBadge.icon} Level ${newBadge.level}: ${newBadge.name}!`, 'success');
+      } else {
+        showToast('Confirmed Sort! ⭐', `+10 Eco-Points awarded for depositing into the ${currentActiveItem.binType}.`, 'success');
+      }
+    });
+  }
+
+  // ==========================================================================
+  // TAB 2: PROGRESS (Gamification, Points & Badges)
+  // ==========================================================================
+  function renderProgressTab() {
+    const user = getCurrentUser() || { points: 0, sorts: 0, scans: 0, history: [] };
+    const points = user.points || 0;
+    const badgeInfo = getNextBadgeInfo(points);
+
+    // Summary Stats
+    const statPointsVal = document.getElementById('stat-points-val');
+    const statSortsVal = document.getElementById('stat-sorts-val');
+    const statScansVal = document.getElementById('stat-scans-val');
+    const statRankVal = document.getElementById('stat-rank-val');
+    const statRankLevel = document.getElementById('stat-rank-level');
+
+    if (statPointsVal) statPointsVal.textContent = points;
+    if (statSortsVal) statSortsVal.textContent = user.sorts || 0;
+    if (statScansVal) statScansVal.textContent = user.scans || 0;
+    if (statRankVal) statRankVal.textContent = badgeInfo.current.name;
+    if (statRankLevel) statRankLevel.textContent = `Level ${badgeInfo.current.level} Member`;
+
+    // Milestone Progress Bar
+    const milestoneBadgeIcon = document.getElementById('milestone-badge-icon');
+    const milestoneBadgeTitle = document.getElementById('milestone-badge-title');
+    const milestoneSubText = document.getElementById('milestone-sub-text');
+    const milestoneProgressPercentage = document.getElementById('milestone-progress-percentage');
+    const milestoneProgressBarFill = document.getElementById('milestone-progress-bar-fill');
+
+    if (milestoneBadgeIcon) milestoneBadgeIcon.textContent = badgeInfo.current.icon;
+    if (milestoneBadgeTitle) milestoneBadgeTitle.textContent = `Level ${badgeInfo.current.level}: ${badgeInfo.current.name}`;
+    if (milestoneSubText) milestoneSubText.textContent = badgeInfo.text;
+    if (milestoneProgressPercentage) milestoneProgressPercentage.textContent = `${badgeInfo.percentage}%`;
+    if (milestoneProgressBarFill) {
+      milestoneProgressBarFill.style.width = `${badgeInfo.percentage}%`;
+    }
+
+    // Aesthetic 5-Tier Badges Grid
+    const badgesGridContainer = document.getElementById('badges-grid-container');
+    if (badgesGridContainer) {
+      badgesGridContainer.innerHTML = '';
+      BADGE_TIERS.forEach(tier => {
+        const isUnlocked = points >= tier.minPoints;
+        const card = document.createElement('div');
+        card.className = `badge-card ${isUnlocked ? 'unlocked' : 'locked'}`;
+        card.innerHTML = `
+          <div class="badge-icon-box">${tier.icon}</div>
+          <span class="badge-tier-level">Level ${tier.level}</span>
+          <h4 class="badge-name">${tier.name}</h4>
+          <span class="badge-req">${tier.reqText}</span>
+          <span class="badge-status-tag">${isUnlocked ? '✓ Unlocked' : '🔒 Locked'}</span>
+        `;
+        badgesGridContainer.appendChild(card);
+      });
+    }
+
+    // History Activity Log
+    const historyListContainer = document.getElementById('history-list-container');
+    if (historyListContainer) {
+      const history = user.history || [];
+      if (history.length === 0) {
+        historyListContainer.innerHTML = `
+          <div style="padding: 1.5rem; text-align: center; color: rgba(255, 255, 255, 0.5); font-style: italic;">
+            No verified sorts yet. Scan items in the Home tab and confirm disposal to earn points!
+          </div>
+        `;
+      } else {
+        let historyHtml = '';
+        history.slice(0, 8).forEach(entry => {
+          historyHtml += `
+            <div class="history-item">
+              <div class="history-item-left">
+                <span class="history-item-icon">🗑️</span>
+                <div>
+                  <div class="history-item-name">${escapeHtml(entry.item)}</div>
+                  <div class="history-item-time">${entry.date || 'Today'} • ${entry.time || ''}</div>
+                </div>
+              </div>
+              <div class="history-item-right">
+                <span class="dustbin-callout ${entry.binClass || 'bin-blue'}" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; font-weight: 800; border-radius: 999px;">
+                  ${escapeHtml(entry.bin || 'Dry Bin')}
+                </span>
+                <span class="history-points-badge">+${entry.points || 10} pts</span>
+              </div>
+            </div>
+          `;
+        });
+        historyListContainer.innerHTML = historyHtml;
+      }
+    }
+  }
+
+  // ==========================================================================
+  // TAB 3: FACTS & DAILY HABITS + REVIEW SUBMISSION
+  // ==========================================================================
+  let currentFactIndex = 0;
+  const spotlightIcon = document.getElementById('spotlight-icon');
+  const spotlightBadge = document.getElementById('spotlight-badge');
+  const spotlightTitle = document.getElementById('spotlight-title');
+  const spotlightText = document.getElementById('spotlight-text');
+  const btnNextFact = document.getElementById('btn-next-fact');
+
+  const DAILY_FACT_CACHE_PREFIX = 'ecoscan_ai_daily_fact_';
+
+  function renderFactsTab() {
+    fetchFreshGeminiFact(false);
+    renderFactsTabReviews();
+  }
+
+  async function fetchFreshGeminiFact(forceRefresh = false) {
+    const today = new Date().toISOString().slice(0, 10);
+    const cacheKey = DAILY_FACT_CACHE_PREFIX + today;
+
+    if (!forceRefresh) {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          displayFactData(parsed);
+          return;
+        }
+      } catch (e) {}
+    }
+
+    if (btnNextFact) {
+      btnNextFact.disabled = true;
+      btnNextFact.innerHTML = '<span>⏳</span> Gemini Thinking...';
+    }
+
+    try {
+      const res = await fetch('/api/daily-fact');
+      const json = await res.json();
+      if (json.success && json.data) {
+        displayFactData(json.data);
+        localStorage.setItem(cacheKey, JSON.stringify(json.data));
+        return;
+      }
+    } catch (err) {
+      console.warn('Failed to load Gemini daily fact:', err);
+    } finally {
+      if (btnNextFact) {
+        btnNextFact.disabled = false;
+        btnNextFact.innerHTML = '<span>🎲</span> Next Eco-Fact';
+      }
+    }
+
+    // Fallback to local catalog if offline or key missing
+    currentFactIndex = (currentFactIndex + 1) % ECO_FACTS_DATABASE.length;
+    renderLocalFact(currentFactIndex);
+  }
+
+  function displayFactData(fact) {
+    if (spotlightIcon) spotlightIcon.textContent = fact.icon || '💡';
+    if (spotlightBadge) spotlightBadge.textContent = fact.tag || 'AI Eco Insight';
+    if (spotlightTitle) spotlightTitle.textContent = fact.title || 'Daily Eco Fact';
+    if (spotlightText) {
+      let combined = fact.fact || '';
+      if (fact.habitTip) {
+        combined += `\n\nDaily Green Habit: ${fact.habitTip}`;
+      }
+      spotlightText.textContent = combined;
+    }
+  }
+
+  function renderLocalFact(index) {
+    const fact = ECO_FACTS_DATABASE[index % ECO_FACTS_DATABASE.length];
+    if (spotlightIcon) spotlightIcon.textContent = fact.icon;
+    if (spotlightBadge) spotlightBadge.textContent = fact.tag;
+    if (spotlightTitle) spotlightTitle.textContent = fact.title;
+    if (spotlightText) spotlightText.textContent = fact.text;
+  }
+
+  if (btnNextFact) {
+    btnNextFact.addEventListener('click', () => {
+      fetchFreshGeminiFact(true);
+    });
+  }
+
+  function renderFactsTabReviews() {
+    const listEl = document.getElementById('dash-facts-reviews-list');
+    const badgeEl = document.getElementById('dash-reviews-count-badge');
+    if (!listEl) return;
+
+    const reviews = getStoredReviews();
+    const currentUser = getCurrentUser();
+
+    if (badgeEl) {
+      badgeEl.textContent = `${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'}`;
+    }
+
+    if (reviews.length === 0) {
+      listEl.innerHTML = `
+        <div style="padding: 1.25rem; text-align: center; color: rgba(255, 255, 255, 0.5); font-style: italic; font-size: 0.88rem;">
+          No community reviews yet. Write the first review above!
+        </div>
+      `;
+      return;
+    }
+
+    const sorted = [...reviews].sort((a, b) => (b.likes || 0) - (a.likes || 0));
+
+    let html = '';
+    sorted.forEach(r => {
+      const starsStr = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+      const initial = (r.name || 'User').charAt(0).toUpperCase();
+
+      // Check author ID / username of each review against the currently logged-in user
+      const isAuthor = Boolean(currentUser && (
+        (r.userId && currentUser.id && r.userId === currentUser.id) ||
+        (r.email && currentUser.email && r.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+        (!r.email && !r.userId && r.name && currentUser.name && r.name.toLowerCase() === currentUser.name.toLowerCase())
+      ));
+
+      const avatarMarkup = r.avatar
+        ? `<img src="${r.avatar}" alt="${escapeHtml(r.name)}" class="avatar-photo">`
+        : initial;
+
+      html += `
+        <div class="user-review-card" id="dash_rev_${r.id}">
+          <div class="user-review-card-top">
+            <div class="user-review-stars" aria-label="${r.rating} stars">${starsStr}</div>
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <span class="user-review-date">${r.date || 'Recent'}</span>
+              ${isAuthor ? `
+                <button type="button" class="btn-review-delete" data-delete-review-id="${r.id}" title="Delete your review">
+                  <span>🗑️</span> Delete
+                </button>
+              ` : ''}
+            </div>
+          </div>
+          <p class="user-review-quote">“${escapeHtml(r.text)}”</p>
+          <div class="user-review-author-wrap">
+            <div class="author-identity">
+              <div class="user-avatar-circle">${avatarMarkup}</div>
+              <div class="author-name-text">${escapeHtml(r.name)} ${isAuthor ? '<span style="font-size: 0.72rem; color: var(--color-lime); font-weight: 700; margin-left: 0.35rem;">(You)</span>' : ''}</div>
+            </div>
+            <div style="font-size: 0.82rem; color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 0.3rem;">
+              <span>❤️</span> <span>${r.likes || 0}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    listEl.innerHTML = html;
+
+    listEl.querySelectorAll('.btn-review-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const reviewId = btn.getAttribute('data-delete-review-id');
+        handleDeleteReview(reviewId);
+      });
+    });
+  }
+
+  // Dashboard "Write a Review" Form Handling (Allows multiple reviews by the logged-in user)
+  const dashStarButtons = document.querySelectorAll('#dash-star-rating-selector .star-btn');
+  const dashReviewRatingValue = document.getElementById('dash-review-rating-value');
+  const dashRatingFeedback = document.getElementById('dash-rating-text-feedback');
+  const dashReviewForm = document.getElementById('dash-review-form');
+  const dashReviewText = document.getElementById('dash-review-text');
+
+  const ratingDescriptions = {
+    1: '1 / 5 Stars — Needs Improvement',
+    2: '2 / 5 Stars — Fair',
+    3: '3 / 5 Stars — Good Experience',
+    4: '4 / 5 Stars — Very Helpful',
+    5: '5 / 5 Stars — Excellent'
+  };
+
+  function setDashRating(rating) {
+    if (dashReviewRatingValue) dashReviewRatingValue.value = rating;
+    if (dashRatingFeedback) dashRatingFeedback.textContent = ratingDescriptions[rating] || `${rating} Stars`;
+
+    dashStarButtons.forEach(btn => {
+      const val = parseInt(btn.getAttribute('data-value'), 10);
+      btn.classList.toggle('active', val <= rating);
+      btn.classList.remove('hover');
+    });
+  }
+
+  dashStarButtons.forEach(btn => {
+    const val = parseInt(btn.getAttribute('data-value'), 10);
+
+    btn.addEventListener('mouseenter', () => {
+      dashStarButtons.forEach(b => {
+        const bVal = parseInt(b.getAttribute('data-value'), 10);
+        b.classList.toggle('hover', bVal <= val);
+      });
+      if (dashRatingFeedback) dashRatingFeedback.textContent = ratingDescriptions[val] || `${val} Stars`;
+    });
+
+    btn.addEventListener('mouseleave', () => {
+      dashStarButtons.forEach(b => b.classList.remove('hover'));
+      const current = parseInt(dashReviewRatingValue?.value || '5', 10);
+      if (dashRatingFeedback) dashRatingFeedback.textContent = ratingDescriptions[current];
+    });
+
+    btn.addEventListener('click', () => {
+      setDashRating(val);
+    });
+  });
+
+  if (dashReviewForm) {
+    dashReviewForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = dashReviewText?.value.trim();
+      const rating = parseInt(dashReviewRatingValue?.value || '5', 10);
+      const user = getCurrentUser() || { name: 'Eco Member', email: 'user@ecoscan.ai' };
+
+      if (!text || text.length < 5) {
+        showToast('Review Too Short', 'Please enter at least a short sentence sharing your experience.', 'warning');
+        if (dashReviewText) dashReviewText.focus();
+        return;
+      }
+
+      // Multi-review support with author userId
+      const newReview = {
+        id: 'rev_' + Date.now(),
+        userId: user.id || user.email || 'usr_' + Date.now(),
+        name: user.name || 'Eco Member',
+        email: user.email,
+        rating: rating,
+        text: text,
+        avatar: user.avatar || null,
+        likes: 0,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      };
+
+      const reviews = getStoredReviews();
+      reviews.unshift(newReview);
+      saveReviews(reviews);
+
+      if (dashReviewText) dashReviewText.value = '';
+      setDashRating(5);
+
+      showToast('Review Published! 🚀', `Thank you ${user.name}! Your review is now live.`, 'success');
+
+      // Public and Dashboard Synchronization: update feeds immediately!
+      renderPublicReviews();
+      renderFactsTabReviews();
+    });
+  }
+
+  // ==========================================================================
+  // Initialize Authentication & Auto-Login Check
+  // ==========================================================================
+  initAuth(showToast, (authenticatedUser) => {
+    showDashboardView(authenticatedUser);
+  });
+
+  // Check if user was previously logged in
+  const existingUser = getCurrentUser();
+  if (existingUser && existingUser.isLoggedIn) {
+    showDashboardView(existingUser);
+  } else {
+    showPublicView();
+  }
 });
 
-// Reviews Carousel Controller
-function initReviewsCarousel() {
-  const track = document.getElementById('reviews-track');
-  const prevBtn = document.getElementById('reviews-prev-btn');
-  const nextBtn = document.getElementById('reviews-next-btn');
-  if (!track) return;
-
-  track.innerHTML = '';
-  DEMO_REVIEWS.forEach(r => {
-    const card = document.createElement('div');
-    card.className = 'review-card';
-    card.innerHTML = `
-      <div class="review-card-top">
-        <div class="review-stars">${r.stars}</div>
-        <div class="review-location-tag">${r.city}</div>
-      </div>
-      <p class="review-quote">“${r.text}”</p>
-      <div class="review-author-wrap">
-        <div class="review-avatar-badge">${r.avatar}</div>
-        <div>
-          <div class="review-author-name">${r.author}</div>
-          <div class="review-author-role">${r.role}</div>
-        </div>
-      </div>
-    `;
-    track.appendChild(card);
-  });
-
-  let currentIndex = 0;
-  const cards = () => track.querySelectorAll('.review-card');
-
-  function updateTrack() {
-    const cardList = cards();
-    if (cardList.length === 0) return;
-    const cardWidth = cardList[0].offsetWidth + 24; // width + gap
-    track.style.transform = `translateX(-${currentIndex * cardWidth}px)`;
-  }
-
-  if (prevBtn) {
-    prevBtn.addEventListener('click', () => {
-      currentIndex = Math.max(0, currentIndex - 1);
-      updateTrack();
-    });
-  }
-
-  if (nextBtn) {
-    nextBtn.addEventListener('click', () => {
-      const isMobile = window.innerWidth <= 768;
-      const isTablet = window.innerWidth <= 1180;
-      const maxIndex = isMobile 
-        ? DEMO_REVIEWS.length - 1 
-        : (isTablet ? DEMO_REVIEWS.length - 2 : Math.max(0, DEMO_REVIEWS.length - 3));
-      currentIndex = Math.min(maxIndex, currentIndex + 1);
-      updateTrack();
-    });
-  }
-
-  // Touch Swipe for Mobile
-  let startX = 0;
-  let endX = 0;
-
-  track.addEventListener('touchstart', (e) => {
-    startX = e.touches[0].clientX;
-  }, { passive: true });
-
-  track.addEventListener('touchend', (e) => {
-    endX = e.changedTouches[0].clientX;
-    const diff = startX - endX;
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) {
-        // swipe left -> next
-        const maxIndex = DEMO_REVIEWS.length - 1;
-        currentIndex = Math.min(maxIndex, currentIndex + 1);
-      } else {
-        // swipe right -> prev
-        currentIndex = Math.max(0, currentIndex - 1);
-      }
-      updateTrack();
-    }
-  }, { passive: true });
-
-  window.addEventListener('resize', updateTrack);
+// Helper for XSS prevention
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

@@ -1,0 +1,16 @@
+{
+  "name": "ecoscan-ai",
+  "version": "1.0.0",
+  "description": "EcoScan AI - Intelligent Waste Classification with Gemini Vision API",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1"
+  }
+}

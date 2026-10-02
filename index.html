@@ -24,9 +24,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="./css/main.css">
-  <link rel="stylesheet" href="./css/welcome.css">
-  <link rel="stylesheet" href="./css/animations.css">
+  <link rel="stylesheet" href="./css/main.css?v=4">
+  <link rel="stylesheet" href="./css/welcome.css?v=4">
+  <link rel="stylesheet" href="./css/dashboard.css?v=1">
+  <link rel="stylesheet" href="./css/animations.css?v=4">
 </head>
 <body>
 
@@ -41,8 +42,10 @@
        ====================================================================== -->
   <div id="welcome-page" class="welcome-page">
     
-    <!-- Top Header -->
-    <header class="welcome-header">
+    <!-- Hero Section (Strictly 100vh full screen, overflow: hidden) -->
+    <div id="hero-section" class="welcome-hero-section">
+      <!-- Top Header -->
+      <header class="welcome-header">
       <a href="#welcome" class="brand-logo-wrap" aria-label="EcoScan AI Home">
         <img src="./assets/icons/logo_icon.png?v=3" alt="EcoScan AI Logo" class="brand-icon-sq">
         <span class="brand-logo-text">EcoScan <span class="ai-tag">AI</span></span>
@@ -119,7 +122,7 @@
       <!-- Center Column: Floating Scan Preview Card with Corner Brackets -->
       <section class="welcome-center">
         <div class="hero-scan-preview" aria-hidden="true">
-          <img src="./assets/images/plastic_bottle.jpg" alt="Plastic bottle sample on green moss">
+          <img src="./assets/images/plastic_bottle.jpg?v=2" alt="Plastic bottle sample lying naturally on mossy ground">
           <div class="hero-scan-bracket tl"></div>
           <div class="hero-scan-bracket tr"></div>
           <div class="hero-scan-bracket bl"></div>
@@ -155,7 +158,7 @@
                 <span class="field-icon" aria-hidden="true">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 </span>
-                <input type="text" id="name-input" class="auth-input" placeholder="Full name (e.g. Sachin)">
+                <input type="text" id="name-input" class="auth-input" placeholder="enter your name">
               </div>
             </div>
 
@@ -166,18 +169,18 @@
                 <span class="field-icon" aria-hidden="true">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                 </span>
-                <input type="email" id="email-input" class="auth-input" placeholder="Email address" value="sachin@ecoscan.ai" required>
+                <input type="email" id="email-input" class="auth-input" placeholder="example@gmail.com" required>
               </div>
             </div>
 
             <!-- Password -->
             <div class="form-group">
-              <label for="password-input" class="sr-only">EcoScan password</label>
+              <label for="password-input" class="sr-only">Password</label>
               <div class="input-icon-wrap">
                 <span class="field-icon" aria-hidden="true">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 </span>
-                <input type="password" id="password-input" class="auth-input" placeholder="EcoScan password" value="ecodemo2026" required>
+                <input type="password" id="password-input" class="auth-input" placeholder="enter your password" required>
                 <button type="button" id="password-toggle-btn" class="password-toggle-btn" aria-label="Toggle password visibility">
                   <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -205,44 +208,408 @@
             <div class="auth-divider-switch" id="auth-switch-link">
               <span class="auth-switch-text">New here? <a id="switch-to-signup">Create an account</a></span>
             </div>
-
-            <!-- Prototype Notice -->
-            <p class="prototype-auth-note">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-              Prototype mode — authentication is simulated.
-            </p>
           </form>
         </div>
       </section>
     </main>
+    </div>
 
-    <!-- Reviews Section (Indian Sample Testimonials) -->
-    <section id="reviews" class="welcome-reviews-section">
+    <!-- Interactive Community Reviews Section (Hidden on initial load) -->
+    <section id="reviews" class="welcome-reviews-section" style="display: none;">
       <div class="reviews-container">
+        
+        <!-- Header Bar -->
         <div class="reviews-header-bar">
           <div class="reviews-heading-wrap">
-            <h2 class="reviews-heading">Small habits. Shared stories.</h2>
-            <span class="demo-pill-light">Demo testimonials</span>
+            <h2 class="reviews-heading">Community Reviews</h2>
+            <span id="reviews-count-badge" class="reviews-count-badge">0 reviews</span>
           </div>
-
-          <div class="reviews-controls">
-            <button type="button" id="reviews-prev-btn" class="carousel-btn" aria-label="Previous review">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-            </button>
-            <button type="button" id="reviews-next-btn" class="carousel-btn" aria-label="Next review">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            </button>
-          </div>
+          <span style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); font-weight: 600;">
+            Real community feedback sorted by likes
+          </span>
         </div>
 
-        <div class="reviews-track-wrap">
-          <div id="reviews-track" class="reviews-track">
-            <!-- Dynamic review cards populated by JS -->
-          </div>
+        <!-- Dynamic Reviews Area (Public View) -->
+        <div id="reviews-display-area" class="reviews-display-area">
+          <!-- Populated dynamically via localStorage with likes and dynamic sorting -->
         </div>
+
       </div>
     </section>
 
+  </div> <!-- End #welcome-page -->
+
+  <!-- ======================================================================
+       AUTHENTICATED DASHBOARD (POST-LOGIN / SIGNUP)
+       ====================================================================== -->
+  <div id="dashboard-page" class="dashboard-page" style="display: none;">
+    
+    <!-- Sidebar Navigation Layout ("Home", "Progress", "Facts") -->
+    <aside class="dash-sidebar" aria-label="Dashboard Sidebar">
+      <div class="dash-sidebar-top">
+        <!-- Brand Logo -->
+        <div class="dash-brand-wrap" id="dash-brand-btn" title="EcoScan AI">
+          <img src="./assets/icons/logo_icon.png?v=3" alt="EcoScan Logo" class="dash-brand-icon">
+          <span class="dash-brand-title">EcoScan <span class="ai-tag">AI</span></span>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="dash-nav-list" role="tablist">
+          <li>
+            <button type="button" class="dash-nav-btn active" id="dash-tab-btn-home" data-tab="home" role="tab" aria-selected="true">
+              <span class="nav-icon">📸</span>
+              <span>Home</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="dash-nav-btn" id="dash-tab-btn-progress" data-tab="progress" role="tab" aria-selected="false">
+              <span class="nav-icon">🏆</span>
+              <span>Progress</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="dash-nav-btn" id="dash-tab-btn-facts" data-tab="facts" role="tab" aria-selected="false">
+              <span class="nav-icon">💡</span>
+              <span>Facts</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Sidebar Bottom / User Profile & Logout -->
+      <div class="dash-sidebar-footer">
+        <!-- User Profile Card in Bottom of Sidebar (Clickable to change avatar) -->
+        <div class="dash-user-card" id="dash-user-card" role="button" tabindex="0" title="Click to update profile photo">
+          <div class="dash-user-avatar-wrap">
+            <div class="dash-user-avatar" id="dash-user-avatar">
+              <span id="dash-user-avatar-text">S</span>
+              <img id="dash-user-avatar-img" class="dash-user-avatar-img" src="" alt="Profile avatar" style="display: none;">
+              <span class="avatar-camera-badge" title="Change photo">📷</span>
+            </div>
+          </div>
+          <div class="dash-user-info">
+            <span class="dash-user-name" id="dash-user-name">User</span>
+            <span class="dash-user-badge-label" id="dash-user-badge-label">🌱 Eco Seedling</span>
+          </div>
+        </div>
+
+        <button type="button" class="dash-btn-logout" id="dash-btn-logout" title="Log out of EcoScan AI">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Log Out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Dashboard Main Area -->
+    <main class="dash-main">
+      <!-- Topbar Header -->
+      <header class="dash-topbar">
+        <div class="dash-topbar-left">
+          <h1 class="dash-tab-title" id="dash-header-title">Waste Scanner & Classification</h1>
+          <span class="dash-tab-subtitle" id="dash-header-subtitle">Analyze items and discover designated segregation bins</span>
+        </div>
+        <div class="dash-topbar-right">
+          <div class="dash-points-pill" id="dash-topbar-points">
+            <span>⭐</span> <span id="dash-points-count">0</span> Eco-Points
+          </div>
+        </div>
+      </header>
+
+      <!-- Content Panes -->
+      <div class="dash-content">
+        
+        <!-- ==============================================================
+             TAB 1: HOME (Waste Scanner & Classification)
+             ============================================================== -->
+        <div id="dash-pane-home" class="dash-tab-pane active" role="tabpanel">
+          <div class="scanner-grid">
+            <!-- Viewfinder Card -->
+            <div class="scanner-card">
+              <div class="scanner-card-header">
+                <h2 class="scanner-card-title">
+                  <span>📷</span> Waste Scanner
+                </h2>
+                <span id="scanner-status-badge" style="font-size: 0.8rem; color: var(--color-lime); font-weight: 700;">Ready to Scan</span>
+              </div>
+
+              <!-- Viewfinder Display Area -->
+              <div class="scanner-viewport" id="scanner-viewport">
+                <!-- Laser bar -->
+                <div class="scanner-laser" id="scanner-laser"></div>
+                <!-- Corner Brackets -->
+                <div class="scanner-bracket tl"></div>
+                <div class="scanner-bracket tr"></div>
+                <div class="scanner-bracket bl"></div>
+                <div class="scanner-bracket br"></div>
+
+                <!-- Active video stream / preview image -->
+                <video id="scanner-video" playsinline style="display: none;"></video>
+                <img id="scanner-preview-img" src="./assets/images/plastic_bottle.jpg" alt="Scanned waste preview" style="display: block;">
+                
+                <div id="scanner-idle-placeholder" class="scanner-idle-placeholder" style="display: none;">
+                  <span class="scanner-idle-icon">🔍</span>
+                  <p>Take or upload a photo of waste to classify</p>
+                </div>
+              </div>
+
+              <!-- Action Controls: Take photo & Upload photo -->
+              <div class="scanner-controls">
+                <button type="button" class="btn btn-lime" id="btn-take-photo">
+                  <span>📸</span> Take photo
+                </button>
+                <button type="button" class="btn btn-forest" id="btn-upload-photo">
+                  <span>📁</span> Upload photo
+                </button>
+                <input type="file" id="scanner-file-input" accept="image/*" style="display: none;">
+              </div>
+
+            </div>
+
+            <!-- Classification Result Card -->
+            <div class="result-card" id="scan-result-card">
+              <div class="result-content-body" id="result-content-body">
+                <div class="result-header-row">
+                  <div>
+                    <span style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Classification Result</span>
+                    <h3 class="result-item-name" id="result-item-name">Clear PET Plastic Bottle</h3>
+                  </div>
+                  <span class="result-category-badge badge-non-biodegradable" id="result-category-badge">Non-Biodegradable</span>
+                </div>
+
+                <!-- Dustbin Allocation Callout -->
+                <div class="dustbin-callout bin-blue" id="dustbin-callout">
+                  <div class="dustbin-icon-wrap" id="dustbin-icon-wrap">🗑️</div>
+                  <div class="dustbin-details">
+                    <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; opacity: 0.85;">Designated Disposal Bin</span>
+                    <h4 class="dustbin-name" id="dustbin-name">Blue Bin (Dry / Recyclable Waste)</h4>
+                    <p class="dustbin-desc" id="dustbin-desc">Rinse bottle, remove cap, and flatten before placing in the dry recycling bin.</p>
+                  </div>
+                </div>
+
+                <!-- Disposal Tips -->
+                <div class="disposal-tips">
+                  <div class="disposal-tips-title">
+                    <span>🌱</span> Eco Segregation Advice
+                  </div>
+                  <p id="disposal-advice-text">PET #1 plastic can be melted down into polyester fabrics, bags, and new drink containers if kept free from wet organic contamination.</p>
+                </div>
+              </div>
+
+              <!-- Action Confirmation Button -->
+              <div style="margin-top: auto;">
+                <button type="button" class="btn btn-lime btn-confirm-sort" id="btn-confirm-sort">
+                  <span>✅</span> I Put This in the Dustbin (Confirm Sort)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Compact Recent Scans (Last 24 Hours) Section -->
+          <div class="recent-scans-24h-card" id="recent-scans-card">
+            <div class="recent-scans-header">
+              <div style="display: flex; align-items: center; gap: 0.55rem;">
+                <span style="font-size: 1.15rem;">🕒</span>
+                <h3 style="font-size: 0.95rem; font-weight: 800; color: #FFFFFF; margin: 0;">Recent Scans (Last 24 Hours)</h3>
+              </div>
+              <span id="recent-scans-count" class="recent-scans-badge">0 items</span>
+            </div>
+            <div id="recent-scans-container" class="recent-scans-container">
+              <!-- Dynamically populated or empty state -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ==============================================================
+             TAB 2: PROGRESS (Gamification, Points & Badges)
+             ============================================================== -->
+        <div id="dash-pane-progress" class="dash-tab-pane" role="tabpanel">
+          <div class="progress-dashboard">
+            <!-- Summary Stats Grid -->
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-card-header">
+                  <span>Total Eco-Points</span>
+                  <span class="stat-card-icon">⭐</span>
+                </div>
+                <span class="stat-card-value" id="stat-points-val">0</span>
+                <span class="stat-card-sub">+10 pts per confirmed sort</span>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-card-header">
+                  <span>Verified Sorts</span>
+                  <span class="stat-card-icon">✅</span>
+                </div>
+                <span class="stat-card-value" id="stat-sorts-val">0</span>
+                <span class="stat-card-sub">Accurate bin deposits</span>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-card-header">
+                  <span>Items Scanned</span>
+                  <span class="stat-card-icon">🔍</span>
+                </div>
+                <span class="stat-card-value" id="stat-scans-val">0</span>
+                <span class="stat-card-sub">AI vision classifications</span>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-card-header">
+                  <span>Current Rank</span>
+                  <span class="stat-card-icon">🏅</span>
+                </div>
+                <span class="stat-card-value" style="font-size: 1.25rem;" id="stat-rank-val">Eco Seedling</span>
+                <span class="stat-card-sub" id="stat-rank-level">Level 1 Member</span>
+              </div>
+            </div>
+
+            <!-- Milestone Progress Bar Card -->
+            <div class="milestone-card">
+              <div class="milestone-header">
+                <div class="milestone-title-wrap">
+                  <span class="milestone-icon" id="milestone-badge-icon">🌱</span>
+                  <div>
+                    <h3 class="milestone-title" id="milestone-badge-title">Level 1: Eco Seedling</h3>
+                    <span class="milestone-footer-text" id="milestone-sub-text">50 points needed to reach Level 2: Green Scout</span>
+                  </div>
+                </div>
+                <span class="milestone-points-text" id="milestone-progress-percentage">0%</span>
+              </div>
+
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="milestone-progress-bar-fill" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <!-- Aesthetic Badges (5 Tiers) -->
+            <div class="badges-section">
+              <h3 class="section-title">
+                <span>🎖️</span> Achievement Badges
+              </h3>
+              <div class="badges-grid" id="badges-grid-container">
+                <!-- Dynamically rendered 5 Tier Badges: Eco Seedling, Green Scout, Earth Guardian, Forest Ranger, Planet Champion -->
+              </div>
+            </div>
+
+            <!-- History Activity Log -->
+            <div class="history-section">
+              <h3 class="section-title">
+                <span>📜</span> Recent Verified Sorts
+              </h3>
+              <div class="history-list" id="history-list-container">
+                <!-- Dynamically populated sorting log -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==============================================================
+             TAB 3: FACTS & DAILY HABITS + REVIEW SUBMISSION
+             ============================================================== -->
+        <div id="dash-pane-facts" class="dash-tab-pane" role="tabpanel">
+          <div class="facts-dashboard">
+            <!-- Fact Spotlight Card -->
+            <div class="fact-spotlight-card">
+              <div class="spotlight-icon-circle" id="spotlight-icon">💡</div>
+              <div class="spotlight-content">
+                <span class="spotlight-badge" id="spotlight-badge">Circular Economy</span>
+                <h3 class="spotlight-heading" id="spotlight-title">The 450-Year Plastic Timeline</h3>
+                <p class="spotlight-text" id="spotlight-text">A single PET plastic bottle takes between 450 to 500 years to decompose in nature. In sunlight, it fragments into microscopic particles (microplastics) that contaminate water and soil. Segregating into the Blue Bin ensures it is mechanically shredded into fresh polyester fibers instead!</p>
+                <button type="button" class="btn btn-ghost-light btn-next-fact" id="btn-next-fact">
+                  <span>🎲</span> Next Eco-Fact
+                </button>
+              </div>
+            </div>
+
+            <!-- Daily Clean Habits Section -->
+            <div>
+              <h3 class="section-title" style="margin-bottom: 1.15rem;">
+                <span>🌿</span> Friendly Cleanliness & Segregation Habits
+              </h3>
+              <div class="habits-grid">
+                <div class="habit-card">
+                  <span class="habit-icon">💧</span>
+                  <h4 class="habit-title">The 10-Second Quick Rinse</h4>
+                  <p class="habit-desc">Rinsing drink cartons and food containers prevents mold and protects dry cardboard from contamination in municipal collection trucks.</p>
+                </div>
+                <div class="habit-card">
+                  <span class="habit-icon">✂️</span>
+                  <h4 class="habit-title">Keep Packet Corners Attached</h4>
+                  <p class="habit-desc">When snipping open milk and oil pouches, make a small slit without detaching the small corner tip to avoid creating loose micro-plastic debris.</p>
+                </div>
+                <div class="habit-card">
+                  <span class="habit-icon">🪴</span>
+                  <h4 class="habit-title">Home Compost Wet Scraps</h4>
+                  <p class="habit-desc">Fruit and vegetable scraps break down into nitrogen-rich plant food in 30 days, keeping methane-producing organic waste completely out of landfills.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- "Write a Review" Section at Bottom of Facts Tab -->
+            <div class="dash-review-section">
+              <div class="dash-review-header">
+                <h3 class="section-title" style="margin-bottom: 0.25rem;">
+                  <span>✍️</span> Share Your Community Review
+                </h3>
+                <p style="font-size: 0.88rem; color: rgba(255, 255, 255, 0.7);">
+                  Submit your rating and feedback. Once submitted, your review is pushed directly to the public Community Reviews feed where visitors can read and like it.
+                </p>
+                <div class="dash-review-author-pill">
+                  <span>👤</span> Submitting as: <strong id="dash-review-author-name">Sachin</strong>
+                </div>
+              </div>
+
+              <form id="dash-review-form" class="dash-review-form" novalidate>
+                <!-- Star Rating Selector -->
+                <div class="review-form-group">
+                  <label class="review-label">Your Rating</label>
+                  <div class="star-rating-selector" id="dash-star-rating-selector" role="radiogroup" aria-label="Rating selector">
+                    <button type="button" class="star-btn" data-value="1" aria-label="1 star">★</button>
+                    <button type="button" class="star-btn" data-value="2" aria-label="2 stars">★</button>
+                    <button type="button" class="star-btn" data-value="3" aria-label="3 stars">★</button>
+                    <button type="button" class="star-btn" data-value="4" aria-label="4 stars">★</button>
+                    <button type="button" class="star-btn active" data-value="5" aria-label="5 stars">★</button>
+                    <span class="rating-text-feedback" id="dash-rating-text-feedback">5 / 5 Stars — Excellent</span>
+                  </div>
+                  <input type="hidden" id="dash-review-rating-value" value="5">
+                </div>
+
+                <!-- Review Text Area -->
+                <div class="review-form-group">
+                  <label for="dash-review-text" class="review-label">Your Feedback</label>
+                  <textarea id="dash-review-text" class="dash-review-textarea" rows="3" placeholder="Share your experience using EcoScan AI for sorting waste in your daily life..." required></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div>
+                  <button type="submit" id="btn-submit-dash-review" class="btn btn-lime">
+                    <span>🚀</span> Publish Review to Public Feed
+                  </button>
+                </div>
+              </form>
+
+              <!-- Community Reviews Feed in Facts Tab with Delete for authored reviews -->
+              <div class="dash-reviews-list-wrap" style="margin-top: 1.85rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                  <h4 style="font-size: 1.05rem; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                    <span>💬</span> Community Reviews
+                  </h4>
+                  <span id="dash-reviews-count-badge" style="font-size: 0.78rem; background: rgba(255, 255, 255, 0.1); padding: 0.25rem 0.65rem; border-radius: 999px; color: var(--color-lime); font-weight: 700;">0 reviews</span>
+                </div>
+                <div id="dash-facts-reviews-list" class="dash-facts-reviews-list">
+                  <!-- Dynamically rendered reviews with Delete button for authored reviews -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
   </div>
 
   <!-- ======================================================================
@@ -301,32 +668,51 @@
   </div>
 
   <!-- ======================================================================
-       RIGHT DOWNSIDE: FREQUENTLY ASKED QUESTIONS (FAQ) WIDGET
+       MODAL: PROFILE PICTURE (Camera & Upload)
        ====================================================================== -->
-  <div class="faq-widget-wrap">
-    <!-- Floating Trigger Pill Button -->
-    <button type="button" id="btn-faq-toggle" class="faq-toggle-btn" aria-label="Open Frequently Asked Questions">
-      <span class="faq-badge-bubble">?</span>
-      <span>Frequently Asked Questions</span>
-    </button>
-
-    <!-- FAQ Drawer Panel -->
-    <div id="faq-drawer" class="faq-drawer" role="region" aria-label="Frequently Asked Questions">
-      <div class="faq-drawer-header">
-        <div class="faq-drawer-title">
-          <span>🌿</span> Frequently Asked Questions
+  <div id="avatar-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="avatar-modal-title" style="display: none;">
+    <div class="modal-card avatar-modal-card">
+      <button type="button" id="avatar-modal-close" class="modal-close-btn" aria-label="Close dialog">✕</button>
+      
+      <div class="avatar-modal-header">
+        <div class="avatar-modal-icon-circle">📷</div>
+        <div>
+          <h3 id="avatar-modal-title" style="font-size: 1.35rem; font-weight: 800; color: var(--text-primary); margin: 0;">Set Profile Picture</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.25rem 0 0;">Choose how you want to update your avatar</p>
         </div>
-        <button type="button" id="faq-drawer-close" class="faq-drawer-close" aria-label="Close FAQ drawer">✕</button>
       </div>
 
-      <div id="faq-list-container" class="faq-drawer-body">
-        <!-- Populated dynamically from mockData.js FAQ_DATA -->
+      <!-- Live Camera Viewfinder (active when 'Take photo' clicked) -->
+      <div id="avatar-camera-container" class="avatar-camera-container" style="display: none; margin: 1.25rem 0;">
+        <video id="avatar-camera-video" playsinline style="width: 100%; max-height: 240px; border-radius: 12px; object-fit: cover; background: #000; display: block;"></video>
+        <div style="display: flex; gap: 0.75rem; margin-top: 0.85rem;">
+          <button type="button" id="btn-avatar-snap" class="btn btn-lime" style="flex: 1; justify-content: center;">
+            <span>📸</span> Snap Photo
+          </button>
+          <button type="button" id="btn-avatar-cancel-cam" class="btn btn-ghost-light" style="flex: 1; justify-content: center;">
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      <!-- Action Options -->
+      <div id="avatar-options-container" class="avatar-options-container" style="display: flex; flex-direction: column; gap: 0.85rem; margin-top: 1.25rem;">
+        <button type="button" id="btn-avatar-take-photo" class="btn btn-lime" style="width: 100%; justify-content: center;">
+          <span>📸</span> Take photo
+        </button>
+        <button type="button" id="btn-avatar-upload-photo" class="btn btn-forest" style="width: 100%; justify-content: center;">
+          <span>📁</span> Upload photo
+        </button>
+        <input type="file" id="avatar-file-input" accept="image/*" style="display: none;">
+        <button type="button" id="btn-avatar-remove-photo" class="btn btn-ghost-light" style="width: 100%; justify-content: center; font-size: 0.82rem; color: rgba(255,255,255,0.7); display: none;">
+          <span>🗑️</span> Remove custom photo (use letter badge)
+        </button>
       </div>
     </div>
   </div>
 
   <!-- Master Scripts -->
-  <script type="module" src="./js/app.js"></script>
+  <script type="module" src="./js/app.js?v=4"></script>
 
 </body>
 </html>
