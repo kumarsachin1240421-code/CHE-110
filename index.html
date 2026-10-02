@@ -3,218 +3,330 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EcoScan AI — Campus Waste Classification Portal</title>
-  <meta name="description" content="AI-powered waste classification and segregation portal for smart campuses. Unplug waste confusion with real-time computer vision models.">
+  <title>EcoScan AI — AI Waste Classification</title>
+  <meta name="description" content="A better planet. One scan at a time. Identify your waste and find its next chapter with EcoScan AI.">
   
-  <!-- Fonts -->
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="EcoScan AI — A better planet. One scan at a time.">
+  <meta property="og:description" content="Identify your waste. Find its next chapter. Interactive prototype for sustainable waste sorting.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="./assets/images/plastic_bottle.jpg">
+
+  <!-- Favicon and PWA Manifest -->
+  <link rel="icon" type="image/png" href="./assets/icons/logo_icon.png">
+  <link rel="apple-touch-icon" href="./assets/icons/logo_icon.png">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#173D32">
+
+  <!-- Google Font: Manrope -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="style.css">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2334d399'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z'/></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/welcome.css">
+  <link rel="stylesheet" href="./css/animations.css">
 </head>
 <body>
-  <!-- Atmospheric Background Layer -->
-  <div class="bg-wrapper" id="bgWrapper">
-    <div class="bg-image" id="bgImage"></div>
-    <div class="bg-vignette"></div>
-    <div class="bg-overlay"></div>
+
+  <!-- Screen Reader Announcements -->
+  <div id="aria-live-status" class="sr-only" aria-live="polite"></div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" role="region" aria-label="Notifications"></div>
+
+  <!-- ======================================================================
+       WELCOME & HERO PAGE
+       ====================================================================== -->
+  <div id="welcome-page" class="welcome-page">
+    
+    <!-- Top Header -->
+    <header class="welcome-header">
+      <a href="#welcome" class="brand-logo-wrap" aria-label="EcoScan AI Home">
+        <img src="./assets/icons/logo_icon.png" alt="EcoScan AI Logo" class="brand-icon-sq">
+        <span class="brand-logo-text">EcoScan <span class="ai-tag">AI</span></span>
+      </a>
+
+      <nav class="welcome-nav-links" aria-label="Main Navigation">
+        <a href="#reviews" id="nav-link-reviews" class="nav-link-subtle">Reviews</a>
+        <button type="button" class="nav-link-subtle" id="nav-btn-support">Support</button>
+      </nav>
+    </header>
+
+    <!-- Hero Content (Exact reference replica) -->
+    <main class="welcome-hero">
+      
+      <!-- Left Column: Headline, Subtext, 3-Step Pipeline -->
+      <section class="welcome-left">
+        <h1 class="welcome-headline">
+          A better planet.<br>
+          One scan at a time.
+        </h1>
+        <p class="welcome-subtext">
+          Identify your waste. Find its next chapter.
+        </p>
+
+        <!-- 3-Step Pipeline -->
+        <div class="welcome-steps" aria-label="How EcoScan works in 3 steps">
+          <!-- Step 1: Scan -->
+          <div class="step-card">
+            <div class="step-circle-wrap">
+              <div class="step-circle" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+              </div>
+              <div class="step-connector-line"></div>
+            </div>
+            <div class="step-title">Scan</div>
+            <div class="step-desc">Take a photo of your item</div>
+          </div>
+
+          <!-- Step 2: Sort -->
+          <div class="step-card">
+            <div class="step-circle-wrap">
+              <div class="step-circle" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <polyline points="1 20 1 14 7 14"></polyline>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+              </div>
+              <div class="step-connector-line"></div>
+            </div>
+            <div class="step-title">Sort</div>
+            <div class="step-desc">Get an instant classification</div>
+          </div>
+
+          <!-- Step 3: Grow -->
+          <div class="step-card">
+            <div class="step-circle-wrap">
+              <div class="step-circle" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path>
+                  <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="step-title">Grow</div>
+            <div class="step-desc">Build better habits together</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Center Column: Floating Scan Preview Card with Corner Brackets -->
+      <section class="welcome-center">
+        <div class="hero-scan-preview" aria-hidden="true">
+          <img src="./assets/images/plastic_bottle.jpg" alt="Plastic bottle sample on green moss">
+          <div class="hero-scan-bracket tl"></div>
+          <div class="hero-scan-bracket tr"></div>
+          <div class="hero-scan-bracket bl"></div>
+          <div class="hero-scan-bracket br"></div>
+          <div class="hero-scan-tag">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7 2h10v3a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V2z"></path>
+              <path d="M6 7h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"></path>
+            </svg>
+            Plastic
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Frosted Glass Login Card -->
+      <section class="welcome-right">
+        <div class="auth-glass-card">
+          <h2 id="auth-title" class="auth-title">Welcome back</h2>
+
+          <!-- Mode Tabs -->
+          <div class="auth-tabs" role="tablist">
+            <button type="button" class="auth-tab-btn active" id="tab-login" role="tab" aria-selected="true">Login</button>
+            <button type="button" class="auth-tab-btn" id="tab-signup" role="tab" aria-selected="false">Sign up</button>
+          </div>
+
+          <!-- Form -->
+          <form id="auth-form" class="auth-form" novalidate>
+            
+            <!-- Extra Signup Field (Hidden on Login) -->
+            <div id="signup-fields-wrap" class="form-group" style="display: none;">
+              <label for="name-input" class="sr-only">Full name</label>
+              <div class="input-icon-wrap">
+                <span class="field-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </span>
+                <input type="text" id="name-input" class="auth-input" placeholder="Full name (e.g. Sachin)">
+              </div>
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+              <label for="email-input" class="sr-only">Email address</label>
+              <div class="input-icon-wrap">
+                <span class="field-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                </span>
+                <input type="email" id="email-input" class="auth-input" placeholder="Email address" value="sachin@ecoscan.ai" required>
+              </div>
+            </div>
+
+            <!-- Password -->
+            <div class="form-group">
+              <label for="password-input" class="sr-only">EcoScan password</label>
+              <div class="input-icon-wrap">
+                <span class="field-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </span>
+                <input type="password" id="password-input" class="auth-input" placeholder="EcoScan password" value="ecodemo2026" required>
+                <button type="button" id="password-toggle-btn" class="password-toggle-btn" aria-label="Toggle password visibility">
+                  <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Options Row -->
+            <div class="auth-options-row">
+              <label class="checkbox-wrap">
+                <input type="checkbox" id="remember-me-checkbox" checked>
+                <span>Remember me</span>
+              </label>
+              <a href="#forgot" id="forgot-password-link" class="forgot-password-link">Forgot password?</a>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="auth-submit-btn" class="btn btn-lime" style="width: 100%;">
+              Log in
+            </button>
+
+            <!-- Switch Tab Link with subtle divider lines -->
+            <div class="auth-divider-switch" id="auth-switch-link">
+              <span class="auth-switch-text">New here? <a id="switch-to-signup">Create an account</a></span>
+            </div>
+
+            <!-- Prototype Notice -->
+            <p class="prototype-auth-note">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              Prototype mode — authentication is simulated.
+            </p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <!-- Reviews Section (Indian Sample Testimonials) -->
+    <section id="reviews" class="welcome-reviews-section">
+      <div class="reviews-container">
+        <div class="reviews-header-bar">
+          <div class="reviews-heading-wrap">
+            <h2 class="reviews-heading">Small habits. Shared stories.</h2>
+            <span class="demo-pill-light">Demo testimonials</span>
+          </div>
+
+          <div class="reviews-controls">
+            <button type="button" id="reviews-prev-btn" class="carousel-btn" aria-label="Previous review">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <button type="button" id="reviews-next-btn" class="carousel-btn" aria-label="Next review">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="reviews-track-wrap">
+          <div id="reviews-track" class="reviews-track">
+            <!-- Dynamic review cards populated by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
   </div>
 
-  <!-- Falling Autumn Leaves Container (CSS Keyframe Simulation) -->
-  <div class="leaves-container" id="leavesContainer" aria-hidden="true"></div>
-
-  <!-- Global Header: Top Left Brand Only -->
-  <header class="top-nav" id="topNav">
-    <a href="#" class="brand-group" id="brandGroup" aria-label="EcoScan AI Home">
-      <div class="logo-orb">
-        <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <circle cx="18" cy="18" r="17" fill="url(#orbGrad)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
-          <path d="M18 7C12.5 7 8 11.8 8 17.8C8 23.8 13.2 27.5 17.8 28.9C18 28.9 18.2 28.8 18.2 28.6C18.2 24 21.6 19.8 26.2 19C26.5 19 26.7 18.6 26.6 18.3C25.8 11.9 22.4 7 18 7Z" fill="url(#leafGrad)"/>
-          <path d="M14 17.5C17.5 17 21 13 22 9.5" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="0.2 3.5"/>
-          <circle cx="22" cy="9.5" r="2.2" fill="#34D399"/>
-          <circle cx="14" cy="17.5" r="1.8" fill="#FBBF24"/>
-          <defs>
-            <linearGradient id="orbGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#1E293B"/>
-              <stop offset="1" stop-color="#0F172A"/>
-            </linearGradient>
-            <linearGradient id="leafGrad" x1="8" y1="7" x2="27" y2="29" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#34D399"/>
-              <stop offset="0.6" stop-color="#10B981"/>
-              <stop offset="1" stop-color="#059669"/>
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-      <span class="brand-name">EcoScan <span class="brand-ai">AI</span></span>
-    </a>
-  </header>
-
-  <!-- Main Viewport Content -->
-  <main class="main-layout" id="mainLayout">
-    <!-- Left Column: Vision Statement & Headline -->
-    <section class="hero-left" id="heroLeft">
-      <div class="status-pill">
-        <span class="sparkle-icon">✨</span>
-        <span>Empowering Sustainable Campuses</span>
-      </div>
-
-      <h1 class="hero-title" id="heroTitle">
-        AI Based<br>
-        <span class="hero-gradient-text">Waste Classification</span>
-      </h1>
-
-      <p class="hero-subtitle">
-        Empowering campuses with precision vision models. Unplug waste confusion and automate real-time segregation.
-      </p>
-
-      <!-- Glass Metric Cards / Campus Feedback -->
-      <div class="metrics-row">
-        <div class="review-glass-card" id="reviewCard">
-          <div class="review-stars">
-            <span class="star-gold">★</span>
-            <span class="review-score">4.9</span>
-            <span class="review-count">from 2,400+ campus sorts</span>
-          </div>
-          <p class="review-quote">
-            "EcoScan makes campus waste segregation effortless, transparent, and accurate."
-          </p>
-          <div class="review-author">
-            <span class="author-dash">—</span> Student & Facility Research Teams
-          </div>
+  <!-- ======================================================================
+       MODAL: SUPPORT & OFFICIAL CONTACT
+       ====================================================================== -->
+  <div id="support-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="support-modal-title">
+    <div class="modal-card support-modal-card">
+      <button type="button" id="support-modal-close" class="modal-close-btn" aria-label="Close support dialog">✕</button>
+      
+      <div class="support-modal-header">
+        <div class="support-icon-circle">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
         </div>
-
-        <div class="accuracy-badge" id="accuracyBadge">
-          <div class="accuracy-num">99.4%</div>
-          <div class="accuracy-label">Classification Accuracy</div>
-          <div class="accuracy-sub">ResNet-50 + Edge Vision</div>
+        <div>
+          <h3 id="support-modal-title" style="font-size: 1.35rem; font-weight: 800; color: var(--text-primary);">EcoScan Support</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary);">Direct project contact & assistance</p>
         </div>
       </div>
-    </section>
 
-    <!-- Right Column: Glassmorphism Login Card -->
-    <section class="portal-right" id="portalRight">
-      <div class="glass-login-card" id="glassLoginCard">
-        <!-- Specular Highlight Top Edge -->
-        <div class="card-glow-reflection"></div>
-
-        <!-- Card Header -->
-        <div class="card-header">
-          <div class="card-title-group">
-            <h2 class="card-title" id="cardTitle">Campus Portal</h2>
-            <p class="card-desc" id="cardDesc">Automated Sorting & Admin Access</p>
+      <div class="support-contact-list">
+        <!-- Official Email -->
+        <div class="support-contact-item">
+          <div class="contact-item-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
           </div>
-          <div class="card-action-badge" title="Edge node verified">
-            <svg class="shield-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              <path d="m9 12 2 2 4-4"/>
-            </svg>
+          <div class="contact-item-info">
+            <span class="contact-label">Official email</span>
+            <a href="mailto:ecoscan123@gmail.com" class="contact-value" style="color:var(--color-forest); text-decoration: underline;">ecoscan123@gmail.com</a>
           </div>
         </div>
 
-        <!-- Auth Tabs: Sign In / Sign Up -->
-        <div class="auth-tabs" role="tablist" aria-label="Portal Mode">
-          <button class="tab-btn active" id="tabSignIn" role="tab" aria-selected="true" type="button">
-            Sign In
-          </button>
-          <button class="tab-btn" id="tabSignUp" role="tab" aria-selected="false" type="button">
-            Sign Up
-          </button>
-          <div class="tab-indicator" id="tabIndicator"></div>
-        </div>
-
-        <!-- Login Form -->
-        <form class="auth-form" id="loginForm" novalidate>
-          <!-- Email Input Field -->
-          <div class="input-group">
-            <label for="campusEmail" class="input-label">Campus Email</label>
-            <div class="input-control">
-              <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect width="20" height="16" x="2" y="4" rx="2"/>
-                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-              </svg>
-              <input 
-                type="email" 
-                id="campusEmail" 
-                name="campusEmail" 
-                class="glass-input" 
-                value="operator@ecoscan.ai" 
-                placeholder="operator@campus.edu" 
-                required 
-                autocomplete="username"
-              >
-            </div>
-            <span class="field-error-msg" id="emailError"></span>
+        <!-- Helpline Number -->
+        <div class="support-contact-item">
+          <div class="contact-item-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
           </div>
-
-          <!-- Password Input Field -->
-          <div class="input-group">
-            <div class="label-with-action">
-              <label for="passwordField" class="input-label">Password</label>
-              <a href="#forgot" class="forgot-link" id="forgotLink">Forgot?</a>
-            </div>
-            <div class="input-control">
-              <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <input 
-                type="password" 
-                id="passwordField" 
-                name="password" 
-                class="glass-input" 
-                value="••••••••••••" 
-                placeholder="Enter password" 
-                required 
-                autocomplete="current-password"
-              >
-              <button type="button" class="password-toggle-btn" id="passwordToggle" aria-label="Toggle password visibility">
-                <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              </button>
-            </div>
-            <span class="field-error-msg" id="passwordError"></span>
+          <div class="contact-item-info">
+            <span class="contact-label">Helpline number</span>
+            <a href="tel:+9118002673267" class="contact-value">+91 1800-267-3267</a>
           </div>
-
-          <!-- Cluster Status Bar -->
-          <div class="cluster-status-row">
-            <div class="cluster-label-wrap">
-              <span class="cluster-title">Cluster:</span>
-              <span class="cluster-name" id="clusterName">North Campus Station</span>
-            </div>
-            <div class="cluster-badge" id="clusterBadge">
-              <span class="online-dot"></span>
-              <span class="online-text">Online</span>
-            </div>
-          </div>
-
-          <!-- Submit Button -->
-          <button type="submit" class="submit-btn" id="submitBtn">
-            <span class="btn-text" id="btnText">Log in</span>
-            <span class="btn-arrow" id="btnArrow">→</span>
-            <div class="btn-spinner" id="btnSpinner" aria-hidden="true"></div>
-          </button>
-        </form>
-
-        <!-- Card Footer -->
-        <div class="card-footer">
-          <p class="footer-note">
-            Need credentials? <a href="#request" class="request-access-link" id="requestAccessLink">Request campus access</a>
-          </p>
         </div>
       </div>
-    </section>
-  </main>
 
-  <!-- Notification Toast Container -->
-  <div class="toast-wrapper" id="toastWrapper" aria-live="polite"></div>
+      <div class="support-note-box">
+        For inquiries regarding waste segregation rules, recycling partnerships, or technical feedback, reach out to our team via email or call our toll-free helpline.
+      </div>
 
-  <!-- Main Interaction Script -->
-  <script src="script.js"></script>
+      <button type="button" id="support-modal-btn-dismiss" class="btn btn-forest" style="width: 100%; margin-top: 1.25rem;">
+        Close
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       RIGHT DOWNSIDE: FREQUENTLY ASKED QUESTIONS (FAQ) WIDGET
+       ====================================================================== -->
+  <div class="faq-widget-wrap">
+    <!-- Floating Trigger Pill Button -->
+    <button type="button" id="btn-faq-toggle" class="faq-toggle-btn" aria-label="Open Frequently Asked Questions">
+      <span class="faq-badge-bubble">?</span>
+      <span>Frequently Asked Questions</span>
+    </button>
+
+    <!-- FAQ Drawer Panel -->
+    <div id="faq-drawer" class="faq-drawer" role="region" aria-label="Frequently Asked Questions">
+      <div class="faq-drawer-header">
+        <div class="faq-drawer-title">
+          <span>🌿</span> Frequently Asked Questions
+        </div>
+        <button type="button" id="faq-drawer-close" class="faq-drawer-close" aria-label="Close FAQ drawer">✕</button>
+      </div>
+
+      <div id="faq-list-container" class="faq-drawer-body">
+        <!-- Populated dynamically from mockData.js FAQ_DATA -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Master Scripts -->
+  <script type="module" src="./js/app.js"></script>
+
 </body>
 </html>
