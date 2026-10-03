@@ -5,7 +5,7 @@
  */
 
 import { WASTE_ITEMS_DATABASE, ECO_FACTS_DATABASE } from './mockData.js';
-import { initAuth } from './auth.js';
+import { initAuth, signOutUser } from './auth.js';
 
 // ============================================================================
 // Global Toast System
@@ -526,7 +526,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (dashBtnLogout) {
-    dashBtnLogout.addEventListener('click', () => {
+    dashBtnLogout.addEventListener('click', async () => {
+      await signOutUser();
       const user = getCurrentUser();
       if (user) {
         user.isLoggedIn = false;

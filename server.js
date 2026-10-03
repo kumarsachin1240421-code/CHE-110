@@ -22,6 +22,17 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(__dirname));
 
 /**
+ * GET /api/auth/config
+ * Returns public Supabase client configuration safely (URL and Anon Key).
+ */
+app.get('/api/auth/config', (req, res) => {
+  res.json({
+    supabaseUrl: (process.env.SUPABASE_URL || '').trim(),
+    supabaseAnonKey: (process.env.SUPABASE_ANON_KEY || '').trim()
+  });
+});
+
+/**
  * POST /api/classify
  * Accepts an image (base64 string or data URL), analyzes it with Gemini Vision,
  * and returns structured waste classification JSON.
