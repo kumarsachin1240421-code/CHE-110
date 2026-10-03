@@ -39,7 +39,7 @@ app.get('/api/auth/config', (req, res) => {
  */
 app.post('/api/classify', async (req, res) => {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = (req.body.apiKey || process.env.GEMINI_API_KEY || '').trim();
     const { image, mimeType } = req.body;
 
     if (!image) {
@@ -49,8 +49,8 @@ app.post('/api/classify', async (req, res) => {
       });
     }
 
-    // Check if GEMINI_API_KEY is configured in process.env
-    if (!apiKey || apiKey.trim().length === 0) {
+    // Check if GEMINI_API_KEY is configured
+    if (!apiKey || apiKey.length === 0) {
       return res.status(200).json({
         success: false,
         needsKey: true,
@@ -59,8 +59,8 @@ app.post('/api/classify', async (req, res) => {
       });
     }
 
-    // Initialize Google Generative AI client exclusively via process.env.GEMINI_API_KEY
-    const genAI = new GoogleGenerativeAI(apiKey.trim());
+    // Initialize Google Generative AI client
+    const genAI = new GoogleGenerativeAI(apiKey);
 
     // Extract raw base64 data and mimeType
     let base64Data = image;
@@ -72,45 +72,31 @@ app.post('/api/classify', async (req, res) => {
       base64Data = parts[1];
     }
 
-    const systemInstruction = `You are a world-class waste segregation & recycling intelligence AI.
-Your objective is to inspect the uploaded image of a household waste or discarded item, accurately recognize the material, and return strictly valid JSON matching this exact schema:
+    let model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.2,
+        maxOutputTokens: 180
+      }
+    });
+
+    const prompt = `Return strictly a short JSON response (max 1 sentence advice) without introductory or markdown fluff:
 {
   "itemName": "string",
-  "classification": "Biodegradable" or "Non-Biodegradable",
-  "binColor": "Green Bin (Organic/Wet Waste)" or "Blue Bin (Dry/Recyclable)",
-  "tip": "short, actionable, friendly disposal advice"
+  "category": "Biodegradable" | "Non-Biodegradable",
+  "binType": "Blue Bin (Dry / Recyclable)" | "Green Bin (Wet / Compost)",
+  "ecoAdvice": "1 concise sentence under 15 words"
 }
 
-CRITICAL RULES FOR ACCURATE SEGREGATION:
-1. PAPER, CARDBOARD, NEWSPAPERS, & PAPER SHEETS:
-   - Clean, dry paper sheets, notebooks, books, newspapers, envelopes, and cardboard boxes are recyclable dry waste. In municipal waste management, dry clean paper MUST be deposited in the "Blue Bin (Dry/Recyclable)".
-   - Set classification to "Biodegradable" (since cellulose naturally decomposes in nature), but ALWAYS assign binColor to "Blue Bin (Dry/Recyclable)" for clean paper so it can be mechanically shredded and recycled into new paper products.
-   - If paper is heavily soiled with wet food, oil, or grease (like greasy food packaging or dirty paper napkins), assign "Green Bin (Organic/Wet Waste)" for composting.
-2. ORGANIC & WET WASTE:
-   - Banana peels, apple cores, fruit/vegetable scraps, food leftovers, coffee grounds, tea bags, garden leaves, flowers, and eggshells:
-   - classification: "Biodegradable"
-   - binColor: "Green Bin (Organic/Wet Waste)"
-   - tip: Focus on composting or wet waste processing.
-3. DRY & RECYCLABLE PLASTICS, METALS, GLASS:
-   - Plastic bottles, plastic containers, beverage cans, aluminum foil, glass bottles, metal caps, cardboard cartons:
-   - classification: "Non-Biodegradable"
-   - binColor: "Blue Bin (Dry/Recyclable)"
-   - tip: Advise rinsing residual food/liquid and flattening/crushing to conserve space.
-4. DO NOT HALLUCINATE: Identify what is genuinely visible in the image. Give a concise itemName (e.g. "Clean Paper Sheet", "Plastic Water Bottle", "Banana Peel", "Aluminum Soda Can").`;
+Identify the waste item in the image. Segregation rules:
+- Clean dry paper, cardboard, plastics, cans, bottles, metals, glass: category "Non-Biodegradable", binType "Blue Bin (Dry / Recyclable)".
+- Food waste, fruit/vegetable scraps, organics, soiled paper: category "Biodegradable", binType "Green Bin (Wet / Compost)".
+- ecoAdvice must be 1 concise sentence under 15 words.`;
 
-    const prompt = 'Analyze this waste item for municipal segregation. Accurately identify the item name, whether it is Biodegradable or Non-Biodegradable, its proper bin color (Green Bin for wet/organic, Blue Bin for dry/recyclable), and practical disposal tip.';
-
-    // List of model candidates in order of preference
-    const candidateModels = [
-      'gemini-3.5-flash-lite',
-      'gemini-3.8-flash',
-      'gemini-2.5-flash',
-      'gemini-1.5-flash'
-    ];
-
+    const candidateModels = ['gemini-1.5-flash', 'gemini-flash-latest', 'gemini-3.5-flash-lite'];
+    let response = null;
     let lastError = null;
-    let parsedResult = null;
-    let usedModel = null;
 
     for (const modelName of candidateModels) {
       try {
@@ -118,12 +104,12 @@ CRITICAL RULES FOR ACCURATE SEGREGATION:
           model: modelName,
           generationConfig: {
             responseMimeType: 'application/json',
-            temperature: 0.2
-          },
-          systemInstruction
+            temperature: 0.2,
+            maxOutputTokens: 180
+          }
         });
 
-        const response = await model.generateContent([
+        response = await model.generateContent([
           prompt,
           {
             inlineData: {
@@ -132,37 +118,55 @@ CRITICAL RULES FOR ACCURATE SEGREGATION:
             }
           }
         ]);
-
-        const resultText = response.response.text();
-        try {
-          parsedResult = JSON.parse(resultText);
-        } catch {
-          const cleaned = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
-          parsedResult = JSON.parse(cleaned);
-        }
-
-        if (parsedResult) {
-          usedModel = modelName;
-          break;
-        }
+        if (response) break;
       } catch (err) {
-        console.warn(`Model ${modelName} failed, trying next candidate:`, err.message || err);
         lastError = err;
+        console.warn(`Model ${modelName} call failed, trying next candidate:`, err.message || err);
+      }
+    }
+
+    if (!response) {
+      throw lastError || new Error('Gemini Vision model call failed.');
+    }
+
+    const resultText = response.response.text();
+    let parsedResult = null;
+    try {
+      parsedResult = JSON.parse(resultText);
+    } catch {
+      try {
+        const cleaned = resultText.replace(/```json/gi, '').replace(/```/g, '').trim();
+        parsedResult = JSON.parse(cleaned);
+      } catch {
+        const match = resultText.match(/\{[\s\S]*\}/);
+        if (match) {
+          try {
+            parsedResult = JSON.parse(match[0]);
+          } catch {}
+        }
       }
     }
 
     if (!parsedResult) {
-      throw lastError || new Error('All Gemini Vision model candidates failed to classify image.');
+      throw new Error('Failed to parse Gemini Vision classification response.');
     }
+
+    const category = parsedResult.category === 'Biodegradable' ? 'Biodegradable' : 'Non-Biodegradable';
+    const isBio = category === 'Biodegradable';
+    const binType = parsedResult.binType || (isBio ? 'Green Bin (Wet / Compost)' : 'Blue Bin (Dry / Recyclable)');
+    const ecoAdvice = parsedResult.ecoAdvice || 'Place into designated collection bin.';
 
     return res.json({
       success: true,
       source: 'gemini-vision-live',
       data: {
         itemName: parsedResult.itemName || 'Identified Waste',
-        classification: parsedResult.classification === 'Biodegradable' ? 'Biodegradable' : 'Non-Biodegradable',
-        binColor: parsedResult.binColor || (parsedResult.classification === 'Biodegradable' ? 'Green Bin (Organic/Wet Waste)' : 'Blue Bin (Dry/Recyclable)'),
-        tip: parsedResult.tip || 'Place into designated collection bin.'
+        category: category,
+        classification: category,
+        binType: binType,
+        binColor: binType,
+        ecoAdvice: ecoAdvice,
+        tip: ecoAdvice
       }
     });
 
