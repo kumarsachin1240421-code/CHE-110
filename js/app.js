@@ -961,6 +961,97 @@ document.addEventListener('DOMContentLoaded', () => {
     return valid;
   }
 
+  // 5-Color Waste Classification Bins Configuration & Metadata
+  const BIN_CONFIGS = {
+    GREEN: {
+      colorKey: 'GREEN',
+      binType: 'Green Bin',
+      binColorName: 'Green Bin (Biodegradable & Organic)',
+      defaultCategory: 'Biodegradable & Organic',
+      binClass: 'bin-green',
+      badgeClass: 'badge-green',
+      pointsClass: 'points-green',
+      accentColor: '#16A34A',
+      binIcon: '🌱',
+      defaultPoints: 10,
+      material: 'Organic Biomass / Compostable Waste'
+    },
+    BLUE: {
+      colorKey: 'BLUE',
+      binType: 'Blue Bin',
+      binColorName: 'Blue Bin (Dry & Recyclable)',
+      defaultCategory: 'Dry & Recyclable',
+      binClass: 'bin-blue',
+      badgeClass: 'badge-blue',
+      pointsClass: 'points-blue',
+      accentColor: '#2563EB',
+      binIcon: '♻️',
+      defaultPoints: 10,
+      material: 'Clean Recyclable Packaging'
+    },
+    RED: {
+      colorKey: 'RED',
+      binType: 'Red Bin',
+      binColorName: 'Red Bin (Hazardous & Biomedical)',
+      defaultCategory: 'Hazardous & Biomedical',
+      binClass: 'bin-red',
+      badgeClass: 'badge-red',
+      pointsClass: 'points-red',
+      accentColor: '#ff3e4d',
+      binIcon: '⚠️',
+      defaultPoints: 15,
+      material: 'Hazardous / Toxic / Electronic Waste'
+    },
+    YELLOW: {
+      colorKey: 'YELLOW',
+      binType: 'Yellow Bin',
+      binColorName: 'Yellow Bin (Sanitary & Medical)',
+      defaultCategory: 'Sanitary & Medical',
+      binClass: 'bin-yellow',
+      badgeClass: 'badge-yellow',
+      pointsClass: 'points-yellow',
+      accentColor: '#ffe33e',
+      binIcon: '🩹',
+      defaultPoints: 15,
+      material: 'Sanitary & Medical Hygiene'
+    },
+    BLACK: {
+      colorKey: 'BLACK',
+      binType: 'Black Bin',
+      binColorName: 'Black Bin (General & Mixed)',
+      defaultCategory: 'General & Mixed',
+      binClass: 'bin-black',
+      badgeClass: 'badge-black',
+      pointsClass: 'points-black',
+      accentColor: '#222222',
+      binIcon: '🚮',
+      defaultPoints: 10,
+      material: 'Inert / Non-Recyclable Mixed Waste'
+    }
+  };
+
+  function normalizeBinColor(rawBin, rawCategory) {
+    const b = String(rawBin || '').trim().toUpperCase();
+    const c = String(rawCategory || '').trim().toUpperCase();
+
+    if (b.includes('RED') || c.includes('HAZARD') || c.includes('BIOMEDICAL') || c.includes('TOXIC') || c.includes('BATTER') || c.includes('E-WASTE') || c.includes('ELECTRONIC')) {
+      return 'RED';
+    }
+    if (b.includes('YELLOW') || c.includes('SANITARY') || c.includes('MEDICAL') || c.includes('HYGIENE') || c.includes('BANDAGE') || c.includes('DIAPER') || c.includes('SYRINGE')) {
+      return 'YELLOW';
+    }
+    if (b.includes('BLACK') || c.includes('GENERAL') || c.includes('MIXED') || c.includes('INERT') || c.includes('NON-RECYCL') || c.includes('TRASH') || c.includes('SWEEPING')) {
+      return 'BLACK';
+    }
+    if (b.includes('GREEN') || c.includes('BIO') || c.includes('ORGANIC') || c.includes('COMPOST') || c.includes('WET') || c.includes('FOOD') || c.includes('PEEL')) {
+      return 'GREEN';
+    }
+    if (b.includes('BLUE') || c.includes('DRY') || c.includes('RECYCL') || c.includes('PAPER') || c.includes('PLASTIC') || c.includes('METAL') || c.includes('GLASS') || c.includes('BOTTLE')) {
+      return 'BLUE';
+    }
+    return 'BLUE';
+  }
+
   function addScanTo24hHistory(item) {
     let user = getCurrentUser() || { name: 'Eco Member', email: 'user@ecoscan.ai' };
     const cutoff = Date.now() - TWENTY_FOUR_HOURS_MS;
@@ -970,11 +1061,18 @@ document.addEventListener('DOMContentLoaded', () => {
       id: 'scan_' + Date.now(),
       scannedAt: Date.now(),
       itemName: item.name,
-      category: item.category,
+      category: item.category || item.category_name,
       biodegradable: item.biodegradable,
-      binColorName: item.binColorName || (item.biodegradable ? 'Green Bin (Organic/Wet Waste)' : 'Blue Bin (Dry/Recyclable)'),
-      binClass: item.binClass || (item.biodegradable ? 'bin-green' : 'bin-blue'),
-      binIcon: item.binIcon || (item.biodegradable ? '🌱' : '🗑️'),
+      bin_colour: item.bin_colour,
+      binColorName: item.binColorName || item.binType || 'Disposal Bin',
+      binClass: item.binClass || 'bin-blue',
+      badgeClass: item.badgeClass,
+      pointsClass: item.pointsClass,
+      binIcon: item.binIcon || '🗑️',
+      instructions: item.instructions || item.tip,
+      points: Number(item.points || item.points_value) || 10,
+      points_value: Number(item.points || item.points_value) || 10,
+      image: item.image,
       timeText: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
@@ -1007,13 +1105,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let html = '<div class="recent-scans-grid">';
     scans.forEach(s => {
-      const isBio = s.biodegradable;
       html += `
-        <div class="recent-scan-chip ${s.binClass || (isBio ? 'bin-green' : 'bin-blue')}">
-          <div class="recent-scan-icon">${s.binIcon || (isBio ? '🌱' : '🗑️')}</div>
+        <div class="recent-scan-chip ${s.binClass || 'bin-blue'}" data-scan-id="${s.id}" style="cursor: pointer;" title="Click to view in card">
+          <div class="recent-scan-icon">${s.binIcon || '🗑️'}</div>
           <div class="recent-scan-info">
             <div class="recent-scan-name">${escapeHtml(s.itemName)}</div>
-            <div class="recent-scan-meta">${isBio ? 'Biodegradable' : 'Non-Biodegradable'} • ${s.timeText}</div>
+            <div class="recent-scan-meta">${escapeHtml(s.category || 'Classified')} • ${s.timeText}</div>
           </div>
         </div>
       `;
@@ -1021,6 +1118,34 @@ document.addEventListener('DOMContentLoaded', () => {
     html += '</div>';
 
     container.innerHTML = html;
+
+    // Allow user to click any recent scan to view in classification card
+    container.querySelectorAll('.recent-scan-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const scanId = chip.dataset.scanId;
+        const matched = scans.find(sc => sc.id === scanId);
+        if (matched) {
+          applyClassificationResult({
+            name: matched.itemName,
+            category: matched.category,
+            category_name: matched.category,
+            biodegradable: matched.biodegradable,
+            bin_colour: matched.bin_colour,
+            binType: matched.binColorName || 'Disposal Bin',
+            binColorName: matched.binColorName || 'Disposal Bin',
+            binClass: matched.binClass || 'bin-blue',
+            badgeClass: matched.badgeClass,
+            pointsClass: matched.pointsClass,
+            binIcon: matched.binIcon || '🗑️',
+            instructions: matched.instructions || 'Deposit into designated bin.',
+            points: matched.points || 10,
+            points_value: matched.points_value || 10,
+            image: matched.image
+          });
+          showToast('Loaded Scan', `${matched.itemName} → ${matched.binColorName || 'Disposal Bin'}`, 'info');
+        }
+      });
+    });
   }
 
   // ==========================================================================
@@ -1052,24 +1177,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update Result Card elements
     if (resultItemName) resultItemName.textContent = item.name;
 
+    // Update Category text & badge
     if (resultCategoryBadge) {
-      resultCategoryBadge.textContent = item.category;
-      resultCategoryBadge.className = `result-category-badge ${item.biodegradable ? 'badge-biodegradable' : 'badge-non-biodegradable'}`;
+      const catText = item.category_name || item.category || 'Classified Waste';
+      resultCategoryBadge.textContent = catText;
+      resultCategoryBadge.className = `result-category-badge ${item.badgeClass || (item.biodegradable ? 'badge-green' : 'badge-blue')}`;
     }
 
+    // Update Dynamic Points Pill
+    const pts = Number(item.points_value || item.points) || 10;
+    const resultPointsPill = document.getElementById('result-points-pill');
+    if (resultPointsPill) {
+      resultPointsPill.textContent = `+${pts} Eco-Points`;
+      const pColor = item.pointsClass || (item.binClass ? item.binClass.replace('bin-', 'points-') : 'points-blue');
+      resultPointsPill.className = `result-points-pill ${pColor}`;
+    }
+
+    // Update Dustbin Callout & Details
     if (dustbinCallout) {
       dustbinCallout.className = `dustbin-callout ${item.binClass || (item.biodegradable ? 'bin-green' : 'bin-blue')}`;
     }
     if (dustbinIconWrap) dustbinIconWrap.textContent = item.binIcon || (item.biodegradable ? '🌱' : '🗑️');
-    if (dustbinName) dustbinName.textContent = item.binColorName || (item.biodegradable ? 'Green Bin (Organic/Wet Waste)' : 'Blue Bin (Dry/Recyclable)');
+    if (dustbinName) dustbinName.textContent = item.binColorName || item.binType || 'Disposal Bin';
     if (dustbinDesc) dustbinDesc.textContent = item.instructions || item.tip;
     if (disposalAdviceText) disposalAdviceText.textContent = item.instructions || item.tip;
 
-    // Reset Confirm Sort Button
+    // Reset Confirm Sort Button with points updated
     if (btnConfirmSort) {
       btnConfirmSort.disabled = false;
       btnConfirmSort.classList.remove('confirmed');
-      btnConfirmSort.innerHTML = '<span>✅</span> I Put This in the Dustbin (Confirm Sort)';
+      btnConfirmSort.innerHTML = `<span>✅</span> I Put This in the Dustbin (+${pts} Points)`;
     }
 
     // Increment User Scans
@@ -1125,27 +1262,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const base64Data = imageDataUrl || '';
     const cleanBase64 = base64Data.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
+    const prompt = `You are an expert waste segregation and environmental recycling AI.
+Analyze the image and strictly classify the waste item into one of the 5 standard municipal color bins according to these rules:
+• GREEN: Biodegradable & Organic waste (food leftovers, peels, plants)
+• BLUE: Dry & Recyclable waste (clean plastic, paper, glass, metal)
+• RED: Hazardous & Biomedical waste (chemicals, batteries, electronics, toxic items)
+• YELLOW: Sanitary & Medical waste (bandages, syringes, diapers, medical hygiene)
+• BLACK: General & Mixed waste (inert sweepings, composite materials, non-recyclables)
+
+Force response output strictly as clean JSON matching this exact structure:
+{
+  "waste_detected": "string",
+  "bin_colour": "GREEN" | "BLUE" | "RED" | "YELLOW" | "BLACK",
+  "category_name": "string",
+  "instructions": "string",
+  "points_value": number
+}
+
+Rules:
+- bin_colour MUST be strictly one of: "GREEN", "BLUE", "RED", "YELLOW", "BLACK".
+- instructions must be 1 concise sentence under 20 words.
+- points_value must be an integer (10 for GREEN/BLUE/BLACK, 15 for RED/YELLOW).`;
+
     const requestBody = {
       contents: [
         {
           parts: [
-            {
-              text: `Return strictly a short JSON response (max 1 sentence advice) without introductory or markdown fluff:
-{
-  "itemName": "string",
-  "category": "Biodegradable" | "Non-Biodegradable",
-  "binType": "Blue Bin (Dry / Recyclable)" | "Green Bin (Wet / Compost)",
-  "ecoAdvice": "1 concise sentence under 15 words"
-}
-Identify the waste item in the image. Segregation rules:
-- Clean dry paper, cardboard, plastics, cans, bottles, metals, glass: category "Non-Biodegradable", binType "Blue Bin (Dry / Recyclable)".
-- Food waste, fruit/vegetable scraps, organics, soiled paper: category "Biodegradable", binType "Green Bin (Wet / Compost)".
-- ecoAdvice must be 1 concise sentence under 15 words.`
-            },
+            { text: prompt },
             {
               inlineData: {
                 data: cleanBase64,
-                mimeType: "image/jpeg"
+                mimeType: mimeType || "image/jpeg"
               }
             }
           ]
@@ -1154,12 +1301,12 @@ Identify the waste item in the image. Segregation rules:
       generationConfig: {
         responseMimeType: 'application/json',
         temperature: 0.2,
-        maxOutputTokens: 180
+        maxOutputTokens: 250
       }
     };
 
     // Strictly prioritize gemini-1.5-flash with resilient fallback for upstream 404/availability
-    const candidateModels = ['gemini-1.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest'];
+    const candidateModels = ['gemini-1.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'];
     let directJson = null;
     let lastErr = null;
 
@@ -1205,22 +1352,30 @@ Identify the waste item in the image. Segregation rules:
       throw parseErr;
     }
 
-    const category = parsed.category === 'Biodegradable' ? 'Biodegradable' : 'Non-Biodegradable';
-    const isBio = category === 'Biodegradable';
-    const binType = parsed.binType || (isBio ? 'Green Bin (Wet / Compost)' : 'Blue Bin (Dry / Recyclable)');
-    const ecoAdvice = parsed.ecoAdvice || 'Place into designated collection bin.';
+    const colorKey = normalizeBinColor(parsed.bin_colour, parsed.category_name);
+    const cfg = BIN_CONFIGS[colorKey] || BIN_CONFIGS.BLUE;
+    const wasteName = parsed.waste_detected || parsed.itemName || 'Identified Waste';
+    const catName = parsed.category_name || parsed.category || cfg.defaultCategory;
+    const instructions = parsed.instructions || parsed.ecoAdvice || `Deposit into designated ${cfg.binType}.`;
+    const points = Number(parsed.points_value) || cfg.defaultPoints;
 
     return {
       success: true,
       source: 'gemini-client-direct',
       data: {
-        itemName: parsed.itemName || 'Identified Waste',
-        category,
-        classification: category,
-        binType,
-        binColor: binType,
-        ecoAdvice,
-        tip: ecoAdvice
+        waste_detected: wasteName,
+        bin_colour: colorKey,
+        category_name: catName,
+        instructions: instructions,
+        points_value: points,
+        // Compatibility properties
+        itemName: wasteName,
+        category: catName,
+        classification: catName,
+        binType: cfg.binType,
+        binColor: cfg.binColorName,
+        ecoAdvice: instructions,
+        tip: instructions
       }
     };
   }
@@ -1250,7 +1405,7 @@ Identify the waste item in the image. Segregation rules:
       if (scannerStatusBadge) scannerStatusBadge.textContent = 'Gemini Vision AI Analyzing...';
     }
     if (resultItemName) resultItemName.textContent = 'Analyzing with Gemini Vision AI...';
-    if (dustbinDesc) dustbinDesc.textContent = 'Analyzing material composition & municipal segregation rules...';
+    if (dustbinDesc) dustbinDesc.textContent = 'Analyzing material composition & municipal 5-bin segregation rules...';
     if (resultCategoryBadge) {
       resultCategoryBadge.textContent = 'Analyzing...';
       resultCategoryBadge.className = 'result-category-badge';
@@ -1289,22 +1444,30 @@ Identify the waste item in the image. Segregation rules:
 
       if (res.success && res.data) {
         const d = res.data;
-        const categoryVal = d.category || d.classification || '';
-        const isBio = categoryVal.toLowerCase().includes('bio') && !categoryVal.toLowerCase().includes('non');
-        const binVal = d.binType || d.binColor || '';
-        const isGreen = binVal.toLowerCase().includes('green') || binVal.toLowerCase().includes('wet') || binVal.toLowerCase().includes('compost');
-        const advice = d.ecoAdvice || d.tip || 'Deposit into designated bin.';
+        const colorKey = normalizeBinColor(d.bin_colour || d.binColor || d.binType, d.category_name || d.category || d.classification);
+        const cfg = BIN_CONFIGS[colorKey] || BIN_CONFIGS.BLUE;
+
+        const wasteName = d.waste_detected || d.itemName || 'Identified Waste';
+        const categoryName = d.category_name || d.category || cfg.defaultCategory;
+        const advice = d.instructions || d.ecoAdvice || d.tip || `Deposit into designated ${cfg.binType}.`;
+        const points = Number(d.points_value) || cfg.defaultPoints;
 
         const finalItem = {
-          name: d.itemName || 'Identified Waste',
-          category: isBio ? 'Biodegradable' : 'Non-Biodegradable',
-          biodegradable: isBio,
-          binType: isGreen ? 'Green Bin' : 'Blue Bin',
-          binClass: isGreen ? 'bin-green' : 'bin-blue',
-          binIcon: isGreen ? '🌱' : '🗑️',
-          binColorName: binVal || (isGreen ? 'Green Bin (Wet / Compost)' : 'Blue Bin (Dry / Recyclable)'),
+          name: wasteName,
+          category: categoryName,
+          category_name: categoryName,
+          bin_colour: colorKey,
+          biodegradable: colorKey === 'GREEN',
+          binType: cfg.binType,
+          binClass: cfg.binClass,
+          badgeClass: cfg.badgeClass,
+          pointsClass: cfg.pointsClass,
+          binIcon: cfg.binIcon,
+          binColorName: cfg.binColorName,
           instructions: advice,
-          material: isBio ? 'Organic Matter' : 'Recyclable Packaging',
+          material: cfg.material,
+          points: points,
+          points_value: points,
           image: imageDataUrl
         };
 
@@ -1313,7 +1476,7 @@ Identify the waste item in the image. Segregation rules:
         addScanTo24hHistory(finalItem);
         isScanLocked = true;
 
-        showToast('Gemini Vision Classified', `${d.itemName} → ${binVal || d.binColor}`, 'success');
+        showToast('Gemini Vision Classified', `${wasteName} → ${cfg.binColorName}`, 'success');
         return;
       } else if (res.needsKey) {
         showToast('Gemini Notice', 'GEMINI_API_KEY is empty in .env.local.', 'info');
@@ -1432,9 +1595,10 @@ Identify the waste item in the image. Segregation rules:
       let user = getCurrentUser() || { name: 'Eco Member', email: 'guest@ecoscan.ai', points: 0, sorts: 0, scans: 0, history: [] };
 
       const oldBadge = getUserBadge(user.points || 0);
+      const pointsAwarded = Number(currentActiveItem.points || currentActiveItem.points_value) || 10;
 
-      // Award +10 points & increment sorts
-      user.points = (user.points || 0) + 10;
+      // Award dynamic points & increment sorts
+      user.points = (user.points || 0) + pointsAwarded;
       user.sorts = (user.sorts || 0) + 1;
 
       // Add to user history
@@ -1443,7 +1607,7 @@ Identify the waste item in the image. Segregation rules:
         item: currentActiveItem.name,
         bin: currentActiveItem.binType,
         binClass: currentActiveItem.binClass,
-        points: 10,
+        points: pointsAwarded,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       };
@@ -1455,7 +1619,7 @@ Identify the waste item in the image. Segregation rules:
 
       // Button state
       btnConfirmSort.classList.add('confirmed');
-      btnConfirmSort.innerHTML = '<span>🎉</span> Sorted! +10 Eco-Points Earned';
+      btnConfirmSort.innerHTML = `<span>🎉</span> Sorted! +${pointsAwarded} Eco-Points Earned`;
       btnConfirmSort.disabled = true;
 
       // Check for level unlock
@@ -1463,10 +1627,48 @@ Identify the waste item in the image. Segregation rules:
       if (newBadge.level > oldBadge.level) {
         showToast('Badge Unlocked! 🏆', `Congratulations! You unlocked ${newBadge.icon} Level ${newBadge.level}: ${newBadge.name}!`, 'success');
       } else {
-        showToast('Confirmed Sort! ⭐', `+10 Eco-Points awarded for depositing into the ${currentActiveItem.binType}.`, 'success');
+        showToast('Confirmed Sort! ⭐', `+${pointsAwarded} Eco-Points awarded for depositing into the ${currentActiveItem.binType}.`, 'success');
       }
+
+      // Re-render progress tab if active
+      renderProgressTab();
     });
   }
+
+  // Developer & Tester helper to instantly simulate and verify any of the 5 standard color bins
+  window.testBin = function(colorOrKey = 'RED') {
+    const key = normalizeBinColor(colorOrKey, colorOrKey);
+    const cfg = BIN_CONFIGS[key] || BIN_CONFIGS.BLUE;
+    const testSampleMap = {
+      GREEN: { name: 'Organic Banana Peel & Vegetable Scraps', category: 'Biodegradable & Organic', instructions: 'Deposit in the green organic compost bin.' },
+      BLUE: { name: 'Clear PET Plastic Beverage Bottle', category: 'Dry & Recyclable', instructions: 'Rinse, crush flat, and place into the blue dry recycling bin.' },
+      RED: { name: 'Lithium-Ion AA Battery', category: 'Hazardous & Biomedical', instructions: 'Tape terminals and deposit into red bin for hazardous recycling.' },
+      YELLOW: { name: 'Used Medical Bandage & Gauze', category: 'Sanitary & Medical', instructions: 'Wrap safely and discard into yellow sanitary bin for hygienic incineration.' },
+      BLACK: { name: 'Multi-layer Foil Chip Packet', category: 'General & Mixed', instructions: 'Non-recyclable composite; place into black general waste bin.' }
+    };
+    const sample = testSampleMap[key] || testSampleMap.BLUE;
+    const item = {
+      name: sample.name,
+      category: sample.category,
+      category_name: sample.category,
+      bin_colour: key,
+      biodegradable: key === 'GREEN',
+      binType: cfg.binType,
+      binClass: cfg.binClass,
+      badgeClass: cfg.badgeClass,
+      pointsClass: cfg.pointsClass,
+      binIcon: cfg.binIcon,
+      binColorName: cfg.binColorName,
+      instructions: sample.instructions,
+      material: cfg.material,
+      points: cfg.defaultPoints,
+      points_value: cfg.defaultPoints,
+      image: `./assets/images/${key === 'GREEN' ? 'banana_peel.jpg' : (key === 'BLUE' ? 'plastic_bottle.jpg' : 'cardboard_box.jpg')}`
+    };
+    applyClassificationResult(item);
+    addScanTo24hHistory(item);
+    showToast('5-Bin Test Applied', `${sample.name} → ${cfg.binColorName}`, 'success');
+  };
 
   // ==========================================================================
   // TAB 2: PROGRESS (Gamification, Points & Badges)

@@ -761,61 +761,171 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
-.badge-biodegradable {
+.badge-biodegradable,
+.badge-green {
   background: var(--dash-green-soft);
   border: 1px solid #86EFAC;
   color: var(--dash-green-deep);
 }
 
-.badge-non-biodegradable {
-  background: #FEE2E2;
-  border: 1px solid #FCA5A5;
-  color: #B91C1C;
+.badge-non-biodegradable,
+.badge-blue {
+  background: #EFF6FF;
+  border: 1px solid #93C5FD;
+  color: #1D4ED8;
 }
 
-/* Dustbin Instruction Callout Card */
+.badge-red {
+  background: #FFF1F2;
+  border: 1px solid #FDA4AF;
+  color: #BE123C;
+}
+
+.badge-yellow {
+  background: #FEFCE8;
+  border: 1px solid #FDE047;
+  color: #854D0E;
+}
+
+.badge-black {
+  background: #F1F5F9;
+  border: 1px solid #94A3B8;
+  color: #1E293B;
+}
+
+/* Tactile Points Pill for Classification Result Card */
+.result-points-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.75), 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s ease;
+}
+
+.result-points-pill.points-green {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #86EFAC;
+}
+
+.result-points-pill.points-blue {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #93C5FD;
+}
+
+.result-points-pill.points-red {
+  background: #FFF1F2;
+  color: #BE123C;
+  border: 1px solid #FDA4AF;
+}
+
+.result-points-pill.points-yellow {
+  background: #FEFCE8;
+  color: #854D0E;
+  border: 1px solid #FDE047;
+}
+
+.result-points-pill.points-black {
+  background: #F1F5F9;
+  color: #1E293B;
+  border: 1px solid #94A3B8;
+}
+
+/* Dustbin Instruction Callout Card (Tactile Claymorphic Container) */
 .dustbin-callout {
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 1.25rem;
   display: flex;
   align-items: center;
   gap: 1.25rem;
   border: 1.5px solid transparent;
-  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.95);
+  transition: all 0.3s ease;
 }
 
 .dustbin-callout.bin-blue {
   background: #EFF6FF;
   border-color: #BFDBFE;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.95), inset -1.5px -1.5px 3px rgba(37, 99, 235, 0.06);
 }
 
 .dustbin-callout.bin-green {
   background: #F0FDF4;
   border-color: #BBF7D0;
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.08), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.95), inset -1.5px -1.5px 3px rgba(22, 163, 74, 0.06);
 }
 
 .dustbin-callout.bin-red {
-  background: #FEF2F2;
-  border-color: #FECACA;
+  background: #FFF1F2;
+  border-color: rgba(255, 62, 77, 0.35);
+  box-shadow: 0 8px 20px rgba(255, 62, 77, 0.12), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.95), inset -1.5px -1.5px 3px rgba(255, 62, 77, 0.08);
+}
+
+.dustbin-callout.bin-yellow {
+  background: #FEFCE8;
+  border-color: rgba(255, 227, 62, 0.6);
+  box-shadow: 0 8px 20px rgba(234, 179, 8, 0.12), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.95), inset -1.5px -1.5px 3px rgba(234, 179, 8, 0.08);
+}
+
+.dustbin-callout.bin-black {
+  background: #F8FAFC;
+  border-color: rgba(34, 34, 34, 0.25);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08), inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.95), inset -1.5px -1.5px 3px rgba(15, 23, 42, 0.08);
 }
 
 .dustbin-icon-wrap {
   width: 56px;
   height: 56px;
-  border-radius: 14px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 2rem;
   flex-shrink: 0;
   box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.bin-blue .dustbin-icon-wrap { background: #2563EB; color: #FFFFFF; }
-.bin-green .dustbin-icon-wrap { background: #16A34A; color: #FFFFFF; }
-.bin-red .dustbin-icon-wrap { background: #DC2626; color: #FFFFFF; }
+/* Claymorphic 3D Icon Badges */
+.bin-blue .dustbin-icon-wrap {
+  background: linear-gradient(145deg, #3B82F6, #1D4ED8);
+  color: #FFFFFF;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.35), inset 2px 2px 4px rgba(255, 255, 255, 0.4), inset -2px -2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.bin-green .dustbin-icon-wrap {
+  background: linear-gradient(145deg, #22C55E, #15803D);
+  color: #FFFFFF;
+  box-shadow: 0 8px 16px rgba(22, 163, 74, 0.35), inset 2px 2px 4px rgba(255, 255, 255, 0.4), inset -2px -2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.bin-red .dustbin-icon-wrap {
+  background: linear-gradient(145deg, #ff6370, #ff3e4d);
+  color: #FFFFFF;
+  box-shadow: 0 8px 16px rgba(255, 62, 77, 0.4), inset 2px 2px 4px rgba(255, 255, 255, 0.45), inset -2px -2px 4px rgba(0, 0, 0, 0.22);
+}
+
+.bin-yellow .dustbin-icon-wrap {
+  background: linear-gradient(145deg, #ffea5c, #ffe33e);
+  color: #1E293B; /* strictly dark text */
+  box-shadow: 0 8px 16px rgba(234, 179, 8, 0.42), inset 2px 2px 4px rgba(255, 255, 255, 0.7), inset -2px -2px 4px rgba(0, 0, 0, 0.12);
+}
+
+.bin-black .dustbin-icon-wrap {
+  background: linear-gradient(145deg, #3b3b3b, #222222);
+  color: #FFFFFF;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.4), inset 2px 2px 4px rgba(255, 255, 255, 0.25), inset -2px -2px 4px rgba(0, 0, 0, 0.4);
+}
 
 .dustbin-details {
   display: flex;
@@ -828,10 +938,14 @@
   font-weight: 800;
   color: var(--dash-text-main);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .bin-blue .dustbin-name { color: #1E3A8A; }
 .bin-green .dustbin-name { color: #14532D; }
+.bin-red .dustbin-name { color: #9F1239; }
+.bin-yellow .dustbin-name { color: #713F12; }
+.bin-black .dustbin-name { color: #0F172A; }
 
 .dustbin-desc {
   font-size: 0.85rem;
@@ -975,7 +1089,19 @@
 }
 
 .recent-scan-chip.bin-blue {
-  border-left: 4px solid #38BDF8;
+  border-left: 4px solid #2563EB;
+}
+
+.recent-scan-chip.bin-red {
+  border-left: 4px solid #ff3e4d;
+}
+
+.recent-scan-chip.bin-yellow {
+  border-left: 4px solid #ffe33e;
+}
+
+.recent-scan-chip.bin-black {
+  border-left: 4px solid #222222;
 }
 
 .recent-scan-icon {

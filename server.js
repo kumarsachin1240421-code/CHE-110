@@ -66,21 +66,30 @@ app.post('/api/classify', async (req, res) => {
     const base64Data = typeof image === 'string' ? image : '';
     const cleanBase64 = base64Data.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
-    const prompt = `Return strictly a short JSON response (max 1 sentence advice) without introductory or markdown fluff:
+    const prompt = `You are an expert waste segregation and environmental recycling AI.
+Analyze the image and strictly classify the waste item into one of the 5 standard municipal color bins according to these rules:
+• GREEN: Biodegradable & Organic waste (food leftovers, peels, plants)
+• BLUE: Dry & Recyclable waste (clean plastic, paper, glass, metal)
+• RED: Hazardous & Biomedical waste (chemicals, batteries, electronics, toxic items)
+• YELLOW: Sanitary & Medical waste (bandages, syringes, diapers, medical hygiene)
+• BLACK: General & Mixed waste (inert sweepings, composite materials, non-recyclables)
+
+Force response output strictly as clean JSON matching this exact structure:
 {
-  "itemName": "string",
-  "category": "Biodegradable" | "Non-Biodegradable",
-  "binType": "Blue Bin (Dry / Recyclable)" | "Green Bin (Wet / Compost)",
-  "ecoAdvice": "1 concise sentence under 15 words"
+  "waste_detected": "string",
+  "bin_colour": "GREEN" | "BLUE" | "RED" | "YELLOW" | "BLACK",
+  "category_name": "string",
+  "instructions": "string",
+  "points_value": number
 }
 
-Identify the waste item in the image. Segregation rules:
-- Clean dry paper, cardboard, plastics, cans, bottles, metals, glass: category "Non-Biodegradable", binType "Blue Bin (Dry / Recyclable)".
-- Food waste, fruit/vegetable scraps, organics, soiled paper: category "Biodegradable", binType "Green Bin (Wet / Compost)".
-- ecoAdvice must be 1 concise sentence under 15 words.`;
+Rules:
+- bin_colour MUST be strictly one of: "GREEN", "BLUE", "RED", "YELLOW", "BLACK".
+- instructions must be 1 concise sentence under 20 words.
+- points_value must be an integer (10 for GREEN/BLUE/BLACK, 15 for RED/YELLOW).`;
 
-    // Model name strictly set to gemini-1.5-flash with resilient fallback for upstream 404/availability
-    const candidateModels = ['gemini-1.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest'];
+    // Strictly prioritize gemini-1.5-flash with resilient fallback for upstream 404/availability
+    const candidateModels = ['gemini-1.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'];
     let response = null;
     let lastError = null;
 
@@ -91,7 +100,7 @@ Identify the waste item in the image. Segregation rules:
           generationConfig: {
             responseMimeType: 'application/json',
             temperature: 0.2,
-            maxOutputTokens: 180
+            maxOutputTokens: 250
           }
         });
 
@@ -100,7 +109,7 @@ Identify the waste item in the image. Segregation rules:
           {
             inlineData: {
               data: cleanBase64,
-              mimeType: "image/jpeg"
+              mimeType: mimeType || "image/jpeg"
             }
           }
         ]);
@@ -137,22 +146,52 @@ Identify the waste item in the image. Segregation rules:
       throw new Error('Failed to parse Gemini Vision classification response.');
     }
 
-    const category = parsedResult.category === 'Biodegradable' ? 'Biodegradable' : 'Non-Biodegradable';
-    const isBio = category === 'Biodegradable';
-    const binType = parsedResult.binType || (isBio ? 'Green Bin (Wet / Compost)' : 'Blue Bin (Dry / Recyclable)');
-    const ecoAdvice = parsedResult.ecoAdvice || 'Place into designated collection bin.';
+    const wasteDetected = parsedResult.waste_detected || parsedResult.itemName || 'Identified Waste';
+    let rawBin = String(parsedResult.bin_colour || parsedResult.binColor || parsedResult.binType || '').trim().toUpperCase();
+    let binColour = 'BLUE';
+    if (rawBin.includes('RED') || String(parsedResult.category_name).toUpperCase().includes('HAZARD')) binColour = 'RED';
+    else if (rawBin.includes('YELLOW') || String(parsedResult.category_name).toUpperCase().includes('SANITARY') || String(parsedResult.category_name).toUpperCase().includes('MEDICAL')) binColour = 'YELLOW';
+    else if (rawBin.includes('BLACK') || String(parsedResult.category_name).toUpperCase().includes('GENERAL') || String(parsedResult.category_name).toUpperCase().includes('MIXED')) binColour = 'BLACK';
+    else if (rawBin.includes('GREEN') || String(parsedResult.category_name).toUpperCase().includes('BIO') || String(parsedResult.category_name).toUpperCase().includes('ORGANIC')) binColour = 'GREEN';
+    else if (rawBin.includes('BLUE') || String(parsedResult.category_name).toUpperCase().includes('RECYCL')) binColour = 'BLUE';
+
+    const defaultCategories = {
+      GREEN: 'Biodegradable & Organic',
+      BLUE: 'Dry & Recyclable',
+      RED: 'Hazardous & Biomedical',
+      YELLOW: 'Sanitary & Medical',
+      BLACK: 'General & Mixed'
+    };
+
+    const categoryName = parsedResult.category_name || parsedResult.category || defaultCategories[binColour];
+    const instructions = parsedResult.instructions || parsedResult.ecoAdvice || 'Place into designated collection bin.';
+    const pointsValue = Number(parsedResult.points_value) || (binColour === 'RED' || binColour === 'YELLOW' ? 15 : 10);
+
+    const binTypeNames = {
+      GREEN: 'Green Bin (Biodegradable & Organic Waste)',
+      BLUE: 'Blue Bin (Dry & Recyclable Waste)',
+      RED: 'Red Bin (Hazardous & Biomedical Waste)',
+      YELLOW: 'Yellow Bin (Sanitary & Medical Waste)',
+      BLACK: 'Black Bin (General & Mixed Waste)'
+    };
 
     return res.json({
       success: true,
       source: 'gemini-vision-live',
       data: {
-        itemName: parsedResult.itemName || 'Identified Waste',
-        category: category,
-        classification: category,
-        binType: binType,
-        binColor: binType,
-        ecoAdvice: ecoAdvice,
-        tip: ecoAdvice
+        waste_detected: wasteDetected,
+        bin_colour: binColour,
+        category_name: categoryName,
+        instructions: instructions,
+        points_value: pointsValue,
+        // Compatibility properties
+        itemName: wasteDetected,
+        category: categoryName,
+        classification: categoryName,
+        binType: binTypeNames[binColour] || `${binColour} Bin`,
+        binColor: binTypeNames[binColour] || `${binColour} Bin`,
+        ecoAdvice: instructions,
+        tip: instructions
       }
     });
 
