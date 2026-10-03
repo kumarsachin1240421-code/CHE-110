@@ -278,18 +278,21 @@
 
       <!-- Sidebar Bottom / User Profile & Logout -->
       <div class="dash-sidebar-footer">
-        <!-- User Profile Card in Bottom of Sidebar (Clickable to change avatar) -->
-        <div class="dash-user-card" id="dash-user-card" role="button" tabindex="0" title="Click to update profile photo">
+        <!-- User Profile Card in Bottom of Sidebar (Includes Update Profile trigger) -->
+        <div class="dash-user-card" id="dash-user-card">
           <div class="dash-user-avatar-wrap">
-            <div class="dash-user-avatar" id="dash-user-avatar">
+            <div class="dash-user-avatar" id="dash-user-avatar" role="button" tabindex="0" title="Click to update profile">
               <span id="dash-user-avatar-text">S</span>
               <img id="dash-user-avatar-img" class="dash-user-avatar-img" src="" alt="Profile avatar" style="display: none;">
               <span class="avatar-camera-badge" title="Change photo">📷</span>
             </div>
           </div>
           <div class="dash-user-info">
-            <span class="dash-user-name" id="dash-user-name">User</span>
+            <span class="dash-user-name" id="dash-user-name" title="User">User</span>
             <span class="dash-user-badge-label" id="dash-user-badge-label">🌱 Eco Seedling</span>
+            <button type="button" class="dash-btn-update-profile" id="btn-open-update-profile" title="Update Profile">
+              <span>✏️</span> Update Profile
+            </button>
           </div>
         </div>
 
@@ -367,6 +370,17 @@
                 <input type="file" id="scanner-file-input" accept="image/*" style="display: none;">
               </div>
 
+              <!-- Scan Completion Animated Checkmark Banner/Pill -->
+              <div class="scan-completion-wrap" id="scan-completion-wrap" style="display: none;">
+                <div class="scan-completion-pill" id="scan-completion-pill">
+                  <span class="scan-completion-label">Done</span>
+                  <svg class="scan-checkmark-svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                    <circle class="checkmark-circle" cx="12" cy="12" r="10" fill="none" stroke="#22C55E" stroke-width="2.5" />
+                    <path class="checkmark-check" fill="none" stroke="#22C55E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M7 12.5L10.2 15.5L17 8.5" />
+                  </svg>
+                </div>
+              </div>
+
             </div>
 
             <!-- Classification Result Card -->
@@ -374,7 +388,7 @@
               <div class="result-content-body" id="result-content-body">
                 <div class="result-header-row">
                   <div>
-                    <span style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Classification Result</span>
+                    <span style="font-size: 0.8rem; color: #64748B; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Classification Result</span>
                     <h3 class="result-item-name" id="result-item-name">Clear PET Plastic Bottle</h3>
                   </div>
                   <span class="result-category-badge badge-non-biodegradable" id="result-category-badge">Non-Biodegradable</span>
@@ -413,7 +427,7 @@
             <div class="recent-scans-header">
               <div style="display: flex; align-items: center; gap: 0.55rem;">
                 <span style="font-size: 1.15rem;">🕒</span>
-                <h3 style="font-size: 0.95rem; font-weight: 800; color: #FFFFFF; margin: 0;">Recent Scans (Last 24 Hours)</h3>
+                <h3 style="font-size: 0.95rem; font-weight: 800; color: #0F172A; margin: 0;">Recent Scans (Last 24 Hours)</h3>
               </div>
               <span id="recent-scans-count" class="recent-scans-badge">0 items</span>
             </div>
@@ -555,7 +569,7 @@
                 <h3 class="section-title" style="margin-bottom: 0.25rem;">
                   <span>✍️</span> Share Your Community Review
                 </h3>
-                <p style="font-size: 0.88rem; color: rgba(255, 255, 255, 0.7);">
+                <p style="font-size: 0.88rem; color: #475569;">
                   Submit your rating and feedback. Once submitted, your review is pushed directly to the public Community Reviews feed where visitors can read and like it.
                 </p>
                 <div class="dash-review-author-pill">
@@ -593,12 +607,12 @@
               </form>
 
               <!-- Community Reviews Feed in Facts Tab with Delete for authored reviews -->
-              <div class="dash-reviews-list-wrap" style="margin-top: 1.85rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
+              <div class="dash-reviews-list-wrap" style="margin-top: 1.85rem; border-top: 1px solid var(--dash-border); padding-top: 1.5rem;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-                  <h4 style="font-size: 1.05rem; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                  <h4 style="font-size: 1.05rem; font-weight: 800; color: #0F172A; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
                     <span>💬</span> Community Reviews
                   </h4>
-                  <span id="dash-reviews-count-badge" style="font-size: 0.78rem; background: rgba(255, 255, 255, 0.1); padding: 0.25rem 0.65rem; border-radius: 999px; color: var(--color-lime); font-weight: 700;">0 reviews</span>
+                  <span id="dash-reviews-count-badge" style="font-size: 0.78rem; background: var(--dash-green-soft); padding: 0.25rem 0.65rem; border-radius: 999px; color: var(--dash-green-deep); font-weight: 700;">0 reviews</span>
                 </div>
                 <div id="dash-facts-reviews-list" class="dash-facts-reviews-list">
                   <!-- Dynamically rendered reviews with Delete button for authored reviews -->
@@ -668,45 +682,134 @@
   </div>
 
   <!-- ======================================================================
-       MODAL: PROFILE PICTURE (Camera & Upload)
+       MODAL: UPDATE PROFILE (Avatar & Display Name)
        ====================================================================== -->
-  <div id="avatar-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="avatar-modal-title" style="display: none;">
-    <div class="modal-card avatar-modal-card">
-      <button type="button" id="avatar-modal-close" class="modal-close-btn" aria-label="Close dialog">✕</button>
+  <div id="profile-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+    <div class="modal-card profile-modal-card">
+      <button type="button" id="profile-modal-close" class="modal-close-btn" aria-label="Close dialog">✕</button>
       
-      <div class="avatar-modal-header">
-        <div class="avatar-modal-icon-circle">📷</div>
+      <div class="profile-modal-header">
+        <div class="profile-modal-icon-circle">👤</div>
         <div>
-          <h3 id="avatar-modal-title" style="font-size: 1.35rem; font-weight: 800; color: var(--text-primary); margin: 0;">Set Profile Picture</h3>
-          <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.25rem 0 0;">Choose how you want to update your avatar</p>
+          <h3 id="profile-modal-title" class="profile-modal-title">Update Profile</h3>
+          <p class="profile-modal-subtitle">Customize your profile photo and display name</p>
         </div>
       </div>
 
-      <!-- Live Camera Viewfinder (active when 'Take photo' clicked) -->
-      <div id="avatar-camera-container" class="avatar-camera-container" style="display: none; margin: 1.25rem 0;">
-        <video id="avatar-camera-video" playsinline style="width: 100%; max-height: 240px; border-radius: 12px; object-fit: cover; background: #000; display: block;"></video>
-        <div style="display: flex; gap: 0.75rem; margin-top: 0.85rem;">
-          <button type="button" id="btn-avatar-snap" class="btn btn-lime" style="flex: 1; justify-content: center;">
-            <span>📸</span> Snap Photo
+      <!-- Live Avatar Preview Display -->
+      <div class="profile-preview-section">
+        <div class="profile-preview-avatar-wrap">
+          <div class="profile-preview-avatar" id="profile-modal-avatar-preview">
+            <span id="profile-modal-preview-text">U</span>
+            <img id="profile-modal-preview-img" class="profile-modal-preview-img" src="" alt="Avatar preview" style="display: none;">
+          </div>
+          <span class="profile-preview-tag" id="profile-preview-tag">Current Avatar</span>
+        </div>
+      </div>
+
+      <!-- Section A: Change Profile Picture -->
+      <div class="profile-modal-section">
+        <label class="profile-section-label">
+          <span>📷</span> Change Profile Picture
+        </label>
+        
+        <!-- Live Camera Viewfinder (active when 'Take Photo' clicked) -->
+        <div id="profile-camera-container" class="profile-camera-container" style="display: none; margin-bottom: 0.85rem;">
+          <video id="profile-camera-video" playsinline style="width: 100%; max-height: 220px; border-radius: 12px; object-fit: cover; background: #000; display: block;"></video>
+          <div style="display: flex; gap: 0.65rem; margin-top: 0.75rem;">
+            <button type="button" id="btn-profile-snap" class="btn btn-lime" style="flex: 1; justify-content: center; padding: 0.65rem 1rem;">
+              <span>📸</span> Snap Photo
+            </button>
+            <button type="button" id="btn-profile-cancel-cam" class="btn btn-ghost-light" style="flex: 1; justify-content: center; padding: 0.65rem 1rem;">
+              Cancel Camera
+            </button>
+          </div>
+        </div>
+
+        <!-- Photo Options Buttons -->
+        <div id="profile-photo-buttons" class="profile-photo-buttons">
+          <button type="button" id="btn-profile-take-photo" class="btn-photo-action">
+            <span>📸</span> Take Photo
           </button>
-          <button type="button" id="btn-avatar-cancel-cam" class="btn btn-ghost-light" style="flex: 1; justify-content: center;">
-            Cancel
+          <button type="button" id="btn-profile-upload-photo" class="btn-photo-action">
+            <span>📁</span> Upload Photo
+          </button>
+          <input type="file" id="profile-file-input" accept=".png, .jpg, .jpeg, image/png, image/jpeg" style="display: none;">
+        </div>
+        <div id="profile-photo-reset-wrap" style="margin-top: 0.5rem; display: none;">
+          <button type="button" id="btn-profile-reset-photo" class="btn-subtle-reset">
+            <span>↺</span> Remove custom photo (use initials badge)
           </button>
         </div>
       </div>
 
-      <!-- Action Options -->
-      <div id="avatar-options-container" class="avatar-options-container" style="display: flex; flex-direction: column; gap: 0.85rem; margin-top: 1.25rem;">
-        <button type="button" id="btn-avatar-take-photo" class="btn btn-lime" style="width: 100%; justify-content: center;">
-          <span>📸</span> Take photo
+      <!-- Section B: Change Display Name -->
+      <div class="profile-modal-section" style="margin-top: 1rem;">
+        <label for="profile-name-input" class="profile-section-label">
+          <span>✏️</span> Change Display Name
+        </label>
+        <div class="profile-input-wrap">
+          <input type="text" id="profile-name-input" class="profile-name-input" placeholder="Enter your name" maxlength="40" required>
+        </div>
+      </div>
+
+      <!-- Section C: Action Buttons -->
+      <div class="profile-modal-actions" style="margin-top: 1.5rem; display: flex; gap: 0.75rem; justify-content: flex-end;">
+        <button type="button" id="btn-profile-cancel" class="btn btn-ghost-light" style="flex: 1; justify-content: center;">
+          Cancel
         </button>
-        <button type="button" id="btn-avatar-upload-photo" class="btn btn-forest" style="width: 100%; justify-content: center;">
-          <span>📁</span> Upload photo
+        <button type="button" id="btn-profile-save" class="btn btn-lime" style="flex: 1; justify-content: center;">
+          <span>💾</span> Save Changes
         </button>
-        <input type="file" id="avatar-file-input" accept="image/*" style="display: none;">
-        <button type="button" id="btn-avatar-remove-photo" class="btn btn-ghost-light" style="width: 100%; justify-content: center; font-size: 0.82rem; color: rgba(255,255,255,0.7); display: none;">
-          <span>🗑️</span> Remove custom photo (use letter badge)
-        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: OFFLINE / NETWORK BUFFERING (Matching Reference Image)
+       ====================================================================== -->
+  <div id="offline-modal" class="network-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="offline-modal-title">
+    <div class="network-modal-card">
+      <!-- Top Brand -->
+      <div class="network-modal-brand">
+        <span class="network-brand-leaf">🍃</span>
+        <span class="network-brand-text">ECOSCAN AI</span>
+      </div>
+
+      <!-- Center Minimal Trash Bin Illustration with Floating Lid -->
+      <div class="network-bin-illustration-wrap">
+        <div class="network-bin-graphic">
+          <svg width="78" height="90" viewBox="0 0 78 90" fill="none" class="network-bin-svg" aria-hidden="true">
+            <!-- Floating Animated Lid -->
+            <g class="network-bin-lid">
+              <rect x="32" y="3" width="14" height="6" rx="3" fill="#15803D" />
+              <rect x="14" y="9" width="50" height="8" rx="4" fill="#22C55E" />
+            </g>
+            <!-- Bin Body with subtle bouncing/hover effect -->
+            <g class="network-bin-body">
+              <path d="M20 23L25 79C25.5 83 29 86 33 86H45C49 86 52.5 83 53 79L58 23H20Z" fill="#F0FDF4" stroke="#22C55E" stroke-width="3" stroke-linejoin="round" />
+              <!-- Vertical Ridges -->
+              <line x1="32" y1="33" x2="34" y2="73" stroke="#86EFAC" stroke-width="2.5" stroke-linecap="round" />
+              <line x1="39" y1="33" x2="39" y2="73" stroke="#86EFAC" stroke-width="2.5" stroke-linecap="round" />
+              <line x1="46" y1="33" x2="44" y2="73" stroke="#86EFAC" stroke-width="2.5" stroke-linecap="round" />
+              <!-- Recycle / Eco Leaf symbol inside bin -->
+              <circle cx="39" cy="53" r="8" fill="#DCFCE7" />
+              <path d="M39 49C37 51 36 54 39 57C42 54 41 51 39 49Z" fill="#16A34A" />
+            </g>
+          </svg>
+          <div class="network-bin-shadow"></div>
+        </div>
+      </div>
+
+      <!-- Headline & Subtext -->
+      <h3 id="offline-modal-title" class="network-modal-title">Just a moment</h3>
+      <p class="network-modal-subtitle">Waiting for your connection...</p>
+
+      <!-- Animated Three-Dot Bounce Loader -->
+      <div class="network-loader-dots" aria-label="Loading connection">
+        <span class="dot dot-1"></span>
+        <span class="dot dot-2"></span>
+        <span class="dot dot-3"></span>
       </div>
     </div>
   </div>

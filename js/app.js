@@ -219,8 +219,72 @@ document.addEventListener('DOMContentLoaded', () => {
       if (supportModal && supportModal.classList.contains('active')) {
         closeSupportModal();
       }
+      if (offlineModal && offlineModal.classList.contains('active') && navigator.onLine) {
+        hideOfflineModal();
+      }
     }
   });
+
+  // ==========================================================================
+  // GLOBAL NETWORK CONNECTION LISTENER & OFFLINE BUFFERING MODAL
+  // ==========================================================================
+  const offlineModal = document.getElementById('offline-modal');
+
+  function showOfflineModal() {
+    if (offlineModal) {
+      offlineModal.classList.add('active');
+    }
+  }
+
+  function hideOfflineModal() {
+    if (offlineModal) {
+      offlineModal.classList.remove('active');
+    }
+  }
+
+  // Network connection state listeners
+  window.addEventListener('offline', () => {
+    showOfflineModal();
+  });
+
+  window.addEventListener('online', () => {
+    hideOfflineModal();
+    showToast('Back Online', 'Network connection restored successfully.', 'success');
+  });
+
+  // Check initial connection status
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    showOfflineModal();
+  }
+
+  // Dismiss if user clicks backdrop while online
+  if (offlineModal) {
+    offlineModal.addEventListener('click', (e) => {
+      if (e.target === offlineModal && navigator.onLine) {
+        hideOfflineModal();
+      }
+    });
+  }
+
+  // Global fetch error interceptor for offline / network timeout
+  const originalFetch = window.fetch;
+  window.fetch = async function(...args) {
+    try {
+      const response = await originalFetch.apply(this, args);
+      return response;
+    } catch (err) {
+      if (!navigator.onLine || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError') || err.name === 'TypeError') {
+        showOfflineModal();
+      }
+      throw err;
+    }
+  };
+
+  // Expose global methods for testing
+  window.ecoScanNetwork = {
+    showOffline: showOfflineModal,
+    hideOffline: hideOfflineModal
+  };
 
   // Brand Logo: Smooth scroll to top of hero
   const brandLogo = document.querySelector('.brand-logo-wrap');
@@ -417,6 +481,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    if (tabName !== 'home') {
+      stopScannerCamera();
+    }
+
     if (tabName === 'home') {
       if (dashHeaderTitle) dashHeaderTitle.textContent = 'Waste Scanner & Classification';
       if (dashHeaderSubtitle) dashHeaderSubtitle.textContent = 'Analyze items and discover designated segregation bins';
@@ -504,36 +572,94 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================================================
-  // PROFILE PICTURE SETUP (Camera & Upload)
+  // PROFILE & AVATAR MANAGEMENT (Dedicated Update Profile Modal Workflow)
   // ==========================================================================
-  function initAvatarManagement() {
+  function initProfileManagement() {
     const dashUserCard = document.getElementById('dash-user-card');
     const dashUserAvatar = document.getElementById('dash-user-avatar');
-    const avatarModal = document.getElementById('avatar-modal');
-    const avatarModalClose = document.getElementById('avatar-modal-close');
-    const btnAvatarTakePhoto = document.getElementById('btn-avatar-take-photo');
-    const btnAvatarUploadPhoto = document.getElementById('btn-avatar-upload-photo');
-    const avatarFileInput = document.getElementById('avatar-file-input');
-    const avatarCameraContainer = document.getElementById('avatar-camera-container');
-    const avatarOptionsContainer = document.getElementById('avatar-options-container');
-    const avatarCameraVideo = document.getElementById('avatar-camera-video');
-    const btnAvatarSnap = document.getElementById('btn-avatar-snap');
-    const btnAvatarCancelCam = document.getElementById('btn-avatar-cancel-cam');
-    const btnAvatarRemovePhoto = document.getElementById('btn-avatar-remove-photo');
+    const btnOpenUpdateProfile = document.getElementById('btn-open-update-profile');
+
+    const profileModal = document.getElementById('profile-modal') || document.getElementById('avatar-modal');
+    const profileModalClose = document.getElementById('profile-modal-close') || document.getElementById('avatar-modal-close');
+    const btnProfileCancel = document.getElementById('btn-profile-cancel');
+    const btnProfileSave = document.getElementById('btn-profile-save');
+
+    // Section A: Photo controls
+    const btnProfileTakePhoto = document.getElementById('btn-profile-take-photo');
+    const btnProfileUploadPhoto = document.getElementById('btn-profile-upload-photo');
+    const profileFileInput = document.getElementById('profile-file-input');
+    const profileCameraContainer = document.getElementById('profile-camera-container');
+    const profileCameraVideo = document.getElementById('profile-camera-video');
+    const btnProfileSnap = document.getElementById('btn-profile-snap');
+    const btnProfileCancelCam = document.getElementById('btn-profile-cancel-cam');
+    const btnProfileResetPhoto = document.getElementById('btn-profile-reset-photo');
+    const profilePhotoResetWrap = document.getElementById('profile-photo-reset-wrap');
+
+    // Preview elements
+    const previewImg = document.getElementById('profile-modal-preview-img');
+    const previewText = document.getElementById('profile-modal-preview-text');
+    const previewTag = document.getElementById('profile-preview-tag');
+
+    // Section B: Name input
+    const profileNameInput = document.getElementById('profile-name-input');
 
     let camStream = null;
+    let pendingAvatarDataUrl = undefined; // undefined = untouched, null = removed, string = new data url
 
-    function openAvatarModal() {
-      const user = getCurrentUser();
-      if (btnAvatarRemovePhoto) {
-        btnAvatarRemovePhoto.style.display = (user && user.avatar) ? 'flex' : 'none';
+    function openProfileModal() {
+      const user = getCurrentUser() || { name: 'Eco Member' };
+      pendingAvatarDataUrl = user.avatar || null;
+
+      // Prefill Name
+      if (profileNameInput) {
+        profileNameInput.value = user.name || '';
       }
-      if (avatarModal) avatarModal.style.display = 'flex';
+
+      // Render Preview
+      updateModalPreview(user.name || 'User', pendingAvatarDataUrl, false);
+
+      stopCamera();
+      if (profileModal) {
+        profileModal.classList.add('active');
+        profileModal.style.display = 'flex';
+      }
     }
 
-    function closeAvatarModal() {
+    function closeProfileModal() {
       stopCamera();
-      if (avatarModal) avatarModal.style.display = 'none';
+      pendingAvatarDataUrl = undefined;
+      if (profileModal) {
+        profileModal.classList.remove('active');
+        profileModal.style.display = 'none';
+      }
+    }
+
+    function updateModalPreview(name, avatarUrl, isPendingChange = false) {
+      const initial = (name || 'U').trim().charAt(0).toUpperCase() || 'U';
+
+      if (avatarUrl) {
+        if (previewImg) {
+          previewImg.src = avatarUrl;
+          previewImg.style.display = 'block';
+        }
+        if (previewText) previewText.style.display = 'none';
+        if (profilePhotoResetWrap) profilePhotoResetWrap.style.display = 'block';
+        if (previewTag) {
+          previewTag.textContent = isPendingChange ? 'New Photo Selected (Unsaved)' : 'Current Avatar';
+          previewTag.style.color = isPendingChange ? 'var(--color-lime)' : 'rgba(255,255,255,0.6)';
+        }
+      } else {
+        if (previewImg) previewImg.style.display = 'none';
+        if (previewText) {
+          previewText.textContent = initial;
+          previewText.style.display = 'block';
+        }
+        if (profilePhotoResetWrap) profilePhotoResetWrap.style.display = 'none';
+        if (previewTag) {
+          previewTag.textContent = isPendingChange ? 'Initial Badge Selected' : 'Initial Badge';
+          previewTag.style.color = 'rgba(255,255,255,0.6)';
+        }
+      }
     }
 
     function stopCamera() {
@@ -541,83 +667,108 @@ document.addEventListener('DOMContentLoaded', () => {
         camStream.getTracks().forEach(t => t.stop());
         camStream = null;
       }
-      if (avatarCameraContainer) avatarCameraContainer.style.display = 'none';
-      if (avatarOptionsContainer) avatarOptionsContainer.style.display = 'flex';
-      if (avatarCameraVideo) avatarCameraVideo.srcObject = null;
+      if (profileCameraContainer) profileCameraContainer.style.display = 'none';
+      if (profileCameraVideo) profileCameraVideo.srcObject = null;
     }
 
-    // Make avatar profile section in the bottom of the sidebar clickable
-    if (dashUserCard) {
-      dashUserCard.addEventListener('click', openAvatarModal);
-      dashUserCard.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          openAvatarModal();
+    // Live update initial in preview if name changes and no custom image selected
+    if (profileNameInput) {
+      profileNameInput.addEventListener('input', () => {
+        if (!pendingAvatarDataUrl) {
+          updateModalPreview(profileNameInput.value, null, false);
         }
       });
     }
-    if (dashUserAvatar) dashUserAvatar.addEventListener('click', openAvatarModal);
-    if (avatarModalClose) avatarModalClose.addEventListener('click', closeAvatarModal);
-    if (avatarModal) {
-      avatarModal.addEventListener('click', (e) => {
-        if (e.target === avatarModal) closeAvatarModal();
+
+    // Modal open triggers
+    if (btnOpenUpdateProfile) {
+      btnOpenUpdateProfile.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openProfileModal();
+      });
+    }
+    if (dashUserAvatar) {
+      dashUserAvatar.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openProfileModal();
+      });
+    }
+    if (dashUserCard) {
+      dashUserCard.addEventListener('click', (e) => {
+        // If clicking inside card (and not directly on logout button)
+        if (e.target.closest('#dash-btn-logout')) return;
+        openProfileModal();
       });
     }
 
-    // "Take photo" with device camera
-    if (btnAvatarTakePhoto) {
-      btnAvatarTakePhoto.addEventListener('click', async () => {
+    // Close triggers
+    if (profileModalClose) profileModalClose.addEventListener('click', closeProfileModal);
+    if (btnProfileCancel) btnProfileCancel.addEventListener('click', closeProfileModal);
+    if (profileModal) {
+      profileModal.addEventListener('click', (e) => {
+        if (e.target === profileModal) closeProfileModal();
+      });
+    }
+
+    // Take photo with device camera
+    if (btnProfileTakePhoto) {
+      btnProfileTakePhoto.addEventListener('click', async () => {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           try {
+            stopCamera();
             camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-            if (avatarCameraVideo) {
-              avatarCameraVideo.srcObject = camStream;
-              avatarCameraVideo.play();
+            if (profileCameraVideo) {
+              profileCameraVideo.srcObject = camStream;
+              profileCameraVideo.play();
             }
-            if (avatarOptionsContainer) avatarOptionsContainer.style.display = 'none';
-            if (avatarCameraContainer) avatarCameraContainer.style.display = 'block';
+            if (profileCameraContainer) profileCameraContainer.style.display = 'block';
           } catch (err) {
-            showToast('Camera Unavailable', 'Unable to access camera. Please try "Upload photo" instead.', 'warning');
+            showToast('Camera Unavailable', 'Unable to access camera. Please use "Upload Photo" instead.', 'warning');
           }
         } else {
-          showToast('Camera Unsupported', 'Your browser does not support camera access.', 'warning');
+          showToast('Camera Unsupported', 'Your browser does not support webcam capture.', 'warning');
         }
       });
     }
 
-    if (btnAvatarCancelCam) {
-      btnAvatarCancelCam.addEventListener('click', stopCamera);
+    if (btnProfileCancelCam) {
+      btnProfileCancelCam.addEventListener('click', stopCamera);
     }
 
-    // "Snap Photo"
-    if (btnAvatarSnap) {
-      btnAvatarSnap.addEventListener('click', () => {
-        if (!avatarCameraVideo) return;
+    // Snap Frame Shutter
+    if (btnProfileSnap) {
+      btnProfileSnap.addEventListener('click', () => {
+        if (!profileCameraVideo) return;
         const canvas = document.createElement('canvas');
-        const size = Math.min(avatarCameraVideo.videoWidth || 300, avatarCameraVideo.videoHeight || 300);
+        const size = Math.min(profileCameraVideo.videoWidth || 300, profileCameraVideo.videoHeight || 300);
         canvas.width = 300;
         canvas.height = 300;
         const ctx = canvas.getContext('2d');
 
-        const sx = ((avatarCameraVideo.videoWidth || 300) - size) / 2;
-        const sy = ((avatarCameraVideo.videoHeight || 300) - size) / 2;
-        ctx.drawImage(avatarCameraVideo, sx, sy, size, size, 0, 0, 300, 300);
+        const sx = ((profileCameraVideo.videoWidth || 300) - size) / 2;
+        const sy = ((profileCameraVideo.videoHeight || 300) - size) / 2;
+        ctx.drawImage(profileCameraVideo, sx, sy, size, size, 0, 0, 300, 300);
 
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        applyNewAvatar(dataUrl);
+        pendingAvatarDataUrl = dataUrl;
+
+        // Preview immediately before saving
+        const currentName = profileNameInput ? profileNameInput.value : 'User';
+        updateModalPreview(currentName, pendingAvatarDataUrl, true);
+
         stopCamera();
-        closeAvatarModal();
+        showToast('Photo Captured', 'Preview updated! Click "Save Changes" to finalize.', 'info');
       });
     }
 
-    // "Upload photo"
-    if (btnAvatarUploadPhoto && avatarFileInput) {
-      btnAvatarUploadPhoto.addEventListener('click', () => {
-        avatarFileInput.click();
+    // Upload Photo File Picker
+    if (btnProfileUploadPhoto && profileFileInput) {
+      btnProfileUploadPhoto.addEventListener('click', () => {
+        profileFileInput.click();
       });
 
-      avatarFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
+      profileFileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
@@ -633,8 +784,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const sy = (img.height - size) / 2;
             ctx.drawImage(img, sx, sy, size, size, 0, 0, 300, 300);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-            applyNewAvatar(dataUrl);
-            closeAvatarModal();
+
+            pendingAvatarDataUrl = dataUrl;
+            const currentName = profileNameInput ? profileNameInput.value : 'User';
+            updateModalPreview(currentName, pendingAvatarDataUrl, true);
+            showToast('Image Loaded', 'Preview updated! Click "Save Changes" to apply.', 'info');
           };
           img.src = evt.target.result;
         };
@@ -642,44 +796,81 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // "Remove custom photo"
-    if (btnAvatarRemovePhoto) {
-      btnAvatarRemovePhoto.addEventListener('click', () => {
-        applyNewAvatar(null);
-        closeAvatarModal();
+    // Reset to Initials Badge
+    if (btnProfileResetPhoto) {
+      btnProfileResetPhoto.addEventListener('click', () => {
+        pendingAvatarDataUrl = null;
+        const currentName = profileNameInput ? profileNameInput.value : 'User';
+        updateModalPreview(currentName, null, true);
+        showToast('Photo Cleared', 'Avatar reset to name initials. Click "Save Changes" to apply.', 'info');
       });
     }
 
-    function applyNewAvatar(dataUrl) {
-      const user = getCurrentUser();
-      if (!user) return;
-      user.avatar = dataUrl;
-      saveCurrentUser(user);
-
-      // Update authored reviews
-      const reviews = getStoredReviews();
-      reviews.forEach(r => {
-        if ((user.id && r.userId && r.userId === user.id) ||
-            (user.email && r.email && r.email.toLowerCase() === user.email.toLowerCase()) ||
-            (!r.email && r.name && user.name && r.name.toLowerCase() === user.name.toLowerCase())) {
-          r.avatar = dataUrl;
+    // "Save Changes" Action Button
+    if (btnProfileSave) {
+      btnProfileSave.addEventListener('click', () => {
+        const newName = profileNameInput ? profileNameInput.value.trim() : '';
+        if (!newName) {
+          showToast('Name Required', 'Please enter your display name.', 'warning');
+          if (profileNameInput) profileNameInput.focus();
+          return;
         }
+
+        const user = getCurrentUser();
+        if (!user) return;
+        const oldName = user.name;
+
+        // Apply changes to profile state
+        user.name = newName;
+        if (pendingAvatarDataUrl !== undefined) {
+          user.avatar = pendingAvatarDataUrl;
+        }
+        saveCurrentUser(user);
+
+        // Update stored registered users list if exists
+        try {
+          let users = JSON.parse(localStorage.getItem('ecoscan_users') || '[]');
+          let uIdx = users.findIndex(u => (u.id && u.id === user.id) || (u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()));
+          if (uIdx !== -1) {
+            users[uIdx].name = newName;
+            if (pendingAvatarDataUrl !== undefined) {
+              users[uIdx].avatar = pendingAvatarDataUrl;
+            }
+            localStorage.setItem('ecoscan_users', JSON.stringify(users));
+          }
+        } catch {}
+
+        // Immediately update all reviews written by this user
+        const reviews = getStoredReviews();
+        let reviewsUpdated = false;
+        reviews.forEach(r => {
+          const isAuthor = (user.id && r.userId && r.userId === user.id) ||
+            (user.email && r.email && r.email.toLowerCase() === user.email.toLowerCase()) ||
+            (!r.email && r.name && oldName && r.name.toLowerCase() === oldName.toLowerCase());
+          if (isAuthor) {
+            r.name = newName;
+            if (pendingAvatarDataUrl !== undefined) {
+              r.avatar = user.avatar;
+            }
+            reviewsUpdated = true;
+          }
+        });
+        if (reviewsUpdated) {
+          saveReviews(reviews);
+        }
+
+        // Immediately reflect the new name and image in the sidebar card, navbar, and on reviews
+        updateDashboardUserProfile(user);
+        renderPublicReviews();
+        renderFactsTabReviews();
+
+        closeProfileModal();
+        showToast('Profile Updated! ✨', 'Your display name and profile picture have been updated.', 'success');
       });
-      saveReviews(reviews);
-
-      updateDashboardUserProfile(user);
-      renderPublicReviews();
-      renderFactsTabReviews();
-
-      if (dataUrl) {
-        showToast('Profile Photo Updated! 📸', 'Your new custom avatar is active across your profile and reviews.', 'success');
-      } else {
-        showToast('Photo Removed', 'Reverted to default letter badge.', 'info');
-      }
     }
   }
 
-  initAvatarManagement();
+  initProfileManagement();
 
   // ==========================================================================
   // TAB 1: HOME (Waste Scanner & Classification)
@@ -703,6 +894,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let currentActiveItem = WASTE_ITEMS_DATABASE[0]; // Default Plastic Bottle
   let isMediaStreamActive = false;
+  let activeScannerStream = null;
+
+  function stopScannerCamera() {
+    if (activeScannerStream) {
+      try {
+        activeScannerStream.getTracks().forEach(track => track.stop());
+      } catch {}
+      activeScannerStream = null;
+    }
+    isMediaStreamActive = false;
+    if (scannerVideo) {
+      scannerVideo.srcObject = null;
+      scannerVideo.style.display = 'none';
+    }
+    if (btnTakePhoto) {
+      btnTakePhoto.innerHTML = '<span>📸</span> Take photo';
+    }
+  }
 
   // Helper to convert an image URL or image element to base64 data URL
   async function fetchImageAsBase64(url) {
@@ -820,6 +1029,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyClassificationResult(item) {
     currentActiveItem = item;
 
+    // Trigger Scan Completion Animated Checkmark Pill
+    const scanCompletionWrap = document.getElementById('scan-completion-wrap');
+    if (scanCompletionWrap) {
+      scanCompletionWrap.style.display = 'flex';
+      scanCompletionWrap.classList.remove('animating');
+      void scanCompletionWrap.offsetWidth; // Force reflow to re-trigger SVG stroke-dasharray animation
+      scanCompletionWrap.classList.add('animating');
+    }
+
     // Update image preview to current analyzed photo
     if (item.image && scannerPreviewImg) {
       scannerPreviewImg.src = item.image;
@@ -863,6 +1081,13 @@ document.addEventListener('DOMContentLoaded', () => {
   async function classifyWithGemini(imageDataUrl, mimeType = 'image/jpeg') {
     const thisScanId = ++currentScanRequestId;
     isScanLocked = false;
+
+    // Hide any previous completion checkmark when a new scan starts
+    const scanCompletionWrap = document.getElementById('scan-completion-wrap');
+    if (scanCompletionWrap) {
+      scanCompletionWrap.style.display = 'none';
+      scanCompletionWrap.classList.remove('animating');
+    }
 
     // Set preview immediately to the captured/uploaded photo
     if (scannerPreviewImg) {
@@ -937,65 +1162,94 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn('Gemini endpoint error:', err);
       if (scannerViewport) scannerViewport.classList.remove('scanning');
       if (scannerStatusBadge) scannerStatusBadge.textContent = 'Classification Ready';
+      if (!navigator.onLine) {
+        showOfflineModal();
+      }
       showToast('Scanner Notice', 'Unable to reach Gemini Vision API. Try uploading photo again.', 'warning');
     }
   }
 
-  // "Take Photo" Action wired to /api/classify
+  // "Take Photo" Action wired to /api/classify (TRIGGERS ONLY LIVE WEBCAM STREAM, NEVER FILE PICKER)
   if (btnTakePhoto) {
     btnTakePhoto.addEventListener('click', async () => {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !isMediaStreamActive) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-          if (scannerVideo) {
-            scannerVideo.srcObject = stream;
-            scannerVideo.style.display = 'block';
-            scannerVideo.play();
-          }
-          if (scannerPreviewImg) scannerPreviewImg.style.display = 'none';
-          if (scannerStatusBadge) scannerStatusBadge.textContent = 'Camera Live — Tap Take Photo to Capture';
-          isMediaStreamActive = true;
-          btnTakePhoto.innerHTML = '<span>📸</span> Snap Frame';
-
-          const captureHandler = () => {
-            const frameDataUrl = captureVideoFrame(scannerVideo);
-            const tracks = stream.getTracks();
-            tracks.forEach(track => track.stop());
-            isMediaStreamActive = false;
-            btnTakePhoto.innerHTML = '<span>📸</span> Take photo';
-
-            if (scannerVideo) scannerVideo.style.display = 'none';
-            if (scannerPreviewImg) {
-              scannerPreviewImg.src = frameDataUrl;
-              scannerPreviewImg.style.display = 'block';
-            }
-
-            classifyWithGemini(frameDataUrl, 'image/jpeg');
-            btnTakePhoto.removeEventListener('click', captureHandler);
-          };
-
-          btnTakePhoto.addEventListener('click', captureHandler, { once: true });
-          return;
-        } catch {
-          // Camera permission denied or not available -> open file picker instead
-          if (scannerFileInput) scannerFileInput.click();
-          return;
-        }
+      const scanCompletionWrap = document.getElementById('scan-completion-wrap');
+      if (scanCompletionWrap) {
+        scanCompletionWrap.style.display = 'none';
+        scanCompletionWrap.classList.remove('animating');
       }
 
-      // If camera already active or fallback: prompt file input
-      if (scannerFileInput) scannerFileInput.click();
+      // Case A: Camera stream is currently active -> Snap current frame & classify
+      if (isMediaStreamActive && scannerVideo) {
+        const frameDataUrl = captureVideoFrame(scannerVideo);
+        stopScannerCamera();
+
+        if (scannerPreviewImg) {
+          scannerPreviewImg.src = frameDataUrl;
+          scannerPreviewImg.style.display = 'block';
+        }
+
+        classifyWithGemini(frameDataUrl, 'image/jpeg');
+        return;
+      }
+
+      // Case B: Camera is NOT active -> Start live camera stream inside container
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          let stream = null;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
+          } catch {
+            // Fallback for laptop / desktop webcams
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          }
+
+          if (stream) {
+            activeScannerStream = stream;
+            if (scannerVideo) {
+              scannerVideo.srcObject = stream;
+              scannerVideo.style.display = 'block';
+              scannerVideo.play().catch(e => console.warn('Video play error:', e));
+            }
+            if (scannerPreviewImg) scannerPreviewImg.style.display = 'none';
+            if (scannerStatusBadge) scannerStatusBadge.textContent = 'Camera Live — Tap "Snap Frame" to Capture';
+            isMediaStreamActive = true;
+            btnTakePhoto.innerHTML = '<span>📸</span> Snap Frame';
+          }
+          return;
+        } catch (camErr) {
+          console.warn('Camera access denied or unavailable:', camErr);
+          showToast('Camera Unavailable', 'Unable to access camera. Please allow camera permissions or use "Upload photo".', 'warning');
+          if (scannerStatusBadge) scannerStatusBadge.textContent = 'Camera Unavailable';
+          return;
+        }
+      } else {
+        showToast('Camera Unsupported', 'Your browser does not support webcam capture. Please use "Upload photo".', 'warning');
+        return;
+      }
+      // Note: NEVER call scannerFileInput.click() here! Only "Upload photo" opens file picker.
     });
   }
 
-  // "Upload Photo" Action wired to /api/classify
+  // "Upload Photo" Action wired to /api/classify (TRIGGERS ONLY THE FILE PICKER DIALOG)
   if (btnUploadPhoto && scannerFileInput) {
     btnUploadPhoto.addEventListener('click', () => {
+      // Stop live camera if running
+      if (isMediaStreamActive) {
+        stopScannerCamera();
+      }
+      const scanCompletionWrap = document.getElementById('scan-completion-wrap');
+      if (scanCompletionWrap) {
+        scanCompletionWrap.style.display = 'none';
+        scanCompletionWrap.classList.remove('animating');
+      }
+      // Trigger native file picker dialog
       scannerFileInput.click();
     });
 
     scannerFileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
+      const file = e.target.files && e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
@@ -1004,6 +1258,8 @@ document.addEventListener('DOMContentLoaded', () => {
         classifyWithGemini(dataUrl, file.type || 'image/jpeg');
       };
       reader.readAsDataURL(file);
+      // Reset input value so same file can be re-uploaded if wanted
+      scannerFileInput.value = '';
     });
   }
 
