@@ -62,24 +62,9 @@ app.post('/api/classify', async (req, res) => {
     // Initialize Google Generative AI client
     const genAI = new GoogleGenerativeAI(apiKey);
 
-    // Extract raw base64 data and mimeType
-    let base64Data = image;
-    let detectedMime = mimeType || 'image/jpeg';
-
-    if (typeof image === 'string' && image.includes(';base64,')) {
-      const parts = image.split(';base64,');
-      detectedMime = parts[0].replace('data:', '') || detectedMime;
-      base64Data = parts[1];
-    }
-
-    let model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.2,
-        maxOutputTokens: 180
-      }
-    });
+    // Cleanly strip data URI scheme
+    const base64Data = typeof image === 'string' ? image : '';
+    const cleanBase64 = base64Data.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
     const prompt = `Return strictly a short JSON response (max 1 sentence advice) without introductory or markdown fluff:
 {
@@ -94,7 +79,8 @@ Identify the waste item in the image. Segregation rules:
 - Food waste, fruit/vegetable scraps, organics, soiled paper: category "Biodegradable", binType "Green Bin (Wet / Compost)".
 - ecoAdvice must be 1 concise sentence under 15 words.`;
 
-    const candidateModels = ['gemini-1.5-flash', 'gemini-flash-latest', 'gemini-3.5-flash-lite'];
+    // Model name strictly set to gemini-1.5-flash with resilient fallback for upstream 404/availability
+    const candidateModels = ['gemini-1.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest'];
     let response = null;
     let lastError = null;
 
@@ -113,8 +99,8 @@ Identify the waste item in the image. Segregation rules:
           prompt,
           {
             inlineData: {
-              data: base64Data,
-              mimeType: detectedMime
+              data: cleanBase64,
+              mimeType: "image/jpeg"
             }
           }
         ]);
@@ -170,11 +156,11 @@ Identify the waste item in the image. Segregation rules:
       }
     });
 
-  } catch (error) {
-    console.error('Gemini Classification Error:', error);
+  } catch (err) {
+    console.error("Gemini Vision Scan Error:", err);
     return res.status(500).json({
       success: false,
-      error: error.message || 'Failed to analyze image with Gemini Vision API.'
+      error: err.message || 'Failed to analyze image with Gemini Vision API.'
     });
   }
 });

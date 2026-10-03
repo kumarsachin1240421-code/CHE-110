@@ -1116,8 +1116,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Direct Gemini API client using GEMINI_API_KEY variable directly
   async function callGeminiClientDirect(imageDataUrl, mimeType = 'image/jpeg') {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
-    const base64Data = imageDataUrl.includes(';base64,') ? imageDataUrl.split(';base64,')[1] : imageDataUrl;
+    if (!GEMINI_API_KEY || typeof GEMINI_API_KEY !== 'string' || GEMINI_API_KEY.trim().length === 0) {
+      const keyErr = new Error("GEMINI_API_KEY is not configured or empty.");
+      console.error("Gemini Vision Scan Error:", keyErr);
+      throw keyErr;
+    }
+
+    const base64Data = imageDataUrl || '';
+    const cleanBase64 = base64Data.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
     const requestBody = {
       contents: [
@@ -1138,8 +1144,8 @@ Identify the waste item in the image. Segregation rules:
             },
             {
               inlineData: {
-                mimeType: mimeType || 'image/jpeg',
-                data: base64Data
+                data: cleanBase64,
+                mimeType: "image/jpeg"
               }
             }
           ]
@@ -1152,13 +1158,14 @@ Identify the waste item in the image. Segregation rules:
       }
     };
 
-    const candidateModels = ['gemini-1.5-flash', 'gemini-flash-latest', 'gemini-3.5-flash-lite'];
+    // Strictly prioritize gemini-1.5-flash with resilient fallback for upstream 404/availability
+    const candidateModels = ['gemini-1.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest'];
     let directJson = null;
     let lastErr = null;
 
     for (const modelName of candidateModels) {
       try {
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY.trim())}`;
         const directResponse = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1170,7 +1177,7 @@ Identify the waste item in the image. Segregation rules:
           directJson = json;
           break;
         } else {
-          lastErr = new Error(json.error?.message || `Model ${modelName} call failed`);
+          lastErr = new Error(json.error?.message || `Model ${modelName} call failed with status ${directResponse.status}`);
         }
       } catch (err) {
         lastErr = err;
@@ -1178,6 +1185,7 @@ Identify the waste item in the image. Segregation rules:
     }
 
     if (!directJson) {
+      console.error("Gemini Vision Scan Error:", lastErr);
       throw lastErr || new Error('Gemini API call failed');
     }
 
@@ -1187,12 +1195,14 @@ Identify the waste item in the image. Segregation rules:
     try {
       parsed = JSON.parse(textPart);
     } catch {
-      const cleaned = (textPart || '').replace(/```json/g, '').replace(/```/g, '').trim();
+      const cleaned = (textPart || '').replace(/```json/gi, '').replace(/```/g, '').trim();
       parsed = JSON.parse(cleaned);
     }
 
     if (!parsed) {
-      throw new Error('Failed to parse Gemini Vision direct response.');
+      const parseErr = new Error('Failed to parse Gemini Vision direct response.');
+      console.error("Gemini Vision Scan Error:", parseErr);
+      throw parseErr;
     }
 
     const category = parsed.category === 'Biodegradable' ? 'Biodegradable' : 'Non-Biodegradable';
@@ -1312,7 +1322,7 @@ Identify the waste item in the image. Segregation rules:
       }
     } catch (err) {
       if (thisScanId !== currentScanRequestId) return;
-      console.warn('Gemini endpoint error:', err);
+      console.error("Gemini Vision Scan Error:", err);
       if (scannerViewport) scannerViewport.classList.remove('scanning');
       if (scannerStatusBadge) scannerStatusBadge.textContent = 'Classification Ready';
       if (!navigator.onLine) {
