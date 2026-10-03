@@ -4,8 +4,8 @@
  */
 
 // Supabase Configuration Keys (configured in .env / .env.local or customized here)
-const SUPABASE_URL = "your_supabase_url_here";
-const SUPABASE_ANON_KEY = "your_supabase_anon_key_here";
+const SUPABASE_URL = "https://puddxwwngaxsvezuevuw.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_pPtGWp9wYBLDQjQ5RMdaQA_WhNsdhL3";
 
 export let supabase = null;
 
@@ -30,6 +30,14 @@ function createSupabaseInstance(url, key) {
     console.warn("Supabase client initialization warning:", err);
   }
   return null;
+}
+
+// Helper to safely get or initialize the Supabase client
+export function getSupabase() {
+  if (!supabase) {
+    supabase = createSupabaseInstance(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+  return supabase;
 }
 
 // Initial attempt using declared constants
@@ -66,9 +74,10 @@ function formatUserData(supaUser, fallbackName = "") {
  * Signs out the current user from Supabase and clears local session
  */
 export async function signOutUser() {
-  if (supabase) {
+  const client = getSupabase();
+  if (client) {
     try {
-      await supabase.auth.signOut();
+      await client.auth.signOut();
     } catch (err) {
       console.warn("Supabase signOut error:", err);
     }
@@ -102,6 +111,32 @@ export function initAuth(showToast, onAuthSuccess) {
 
   let currentMode = "login"; // 'login' or 'signup'
 
+  // Helper to attach auth state listener
+  function attachAuthListener() {
+    const client = getSupabase();
+    if (!client || client._authListenerAttached) return;
+    try {
+      client.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_IN" && session?.user) {
+          const user = formatUserData(session.user);
+          localStorage.setItem("ecoscan_current_user", JSON.stringify(user));
+          if (typeof onAuthSuccess === "function") {
+            onAuthSuccess(user);
+          }
+        } else if (event === "SIGNED_OUT") {
+          const user = JSON.parse(localStorage.getItem("ecoscan_current_user") || "null");
+          if (user) {
+            user.isLoggedIn = false;
+            localStorage.setItem("ecoscan_current_user", JSON.stringify(user));
+          }
+        }
+      });
+      client._authListenerAttached = true;
+    } catch (e) {
+      console.warn("Could not attach auth listener:", e);
+    }
+  }
+
   // Fetch server-provided environment variables if available (.env / .env.local)
   async function syncEnvironmentConfig() {
     try {
@@ -112,6 +147,7 @@ export function initAuth(showToast, onAuthSuccess) {
 
       if (activeUrl && activeAnonKey && activeUrl !== "your_supabase_url_here" && activeUrl.startsWith("http")) {
         supabase = createSupabaseInstance(activeUrl, activeAnonKey);
+        attachAuthListener();
       }
     } catch (e) {
       console.warn("Could not query /api/auth/config:", e);
@@ -123,9 +159,10 @@ export function initAuth(showToast, onAuthSuccess) {
 
   // Restore active session on page refresh
   async function restoreSession() {
-    if (!supabase) return;
+    const client = getSupabase();
+    if (!client) return;
     try {
-      const { data, error } = await supabase.auth.getSession();
+      const { data, error } = await client.auth.getSession();
       if (error) {
         console.warn("Supabase getSession error:", error);
         return;
@@ -142,26 +179,8 @@ export function initAuth(showToast, onAuthSuccess) {
     }
   }
 
-  // Listen to Supabase Auth State changes (sign in, sign out, token refresh)
-  if (supabase) {
-    try {
-      supabase.auth.onAuthStateChange((event, session) => {
-        if (event === "SIGNED_IN" && session?.user) {
-          const user = formatUserData(session.user);
-          localStorage.setItem("ecoscan_current_user", JSON.stringify(user));
-          if (typeof onAuthSuccess === "function") {
-            onAuthSuccess(user);
-          }
-        } else if (event === "SIGNED_OUT") {
-          const user = JSON.parse(localStorage.getItem("ecoscan_current_user") || "null");
-          if (user) {
-            user.isLoggedIn = false;
-            localStorage.setItem("ecoscan_current_user", JSON.stringify(user));
-          }
-        }
-      });
-    } catch (e) {}
-  }
+  // Attach listener if client is already initialized
+  attachAuthListener();
 
   // Kick off environment sync & session restoration
   syncEnvironmentConfig();
@@ -228,9 +247,10 @@ export function initAuth(showToast, onAuthSuccess) {
         showToast("Enter Email", "Please enter your email address to receive password reset instructions.", "info");
         return;
       }
-      if (supabase) {
+      const client = getSupabase();
+      if (client) {
         try {
-          const { error } = await supabase.auth.resetPasswordForEmail(email);
+          const { error } = await client.auth.resetPasswordForEmail(email);
           if (error) {
             showToast("Reset Notice", error.message, "warning");
           } else {
@@ -265,13 +285,15 @@ export function initAuth(showToast, onAuthSuccess) {
       authSubmitBtn.disabled = true;
       authSubmitBtn.textContent = currentMode === "signup" ? "Registering..." : "Verifying...";
 
+      const client = getSupabase();
+
       // Mode A: Sign Up via supabase.auth.signUp()
       if (currentMode === "signup") {
         const displayName = nameInput?.value.trim() || email.split("@")[0];
 
-        if (supabase) {
+        if (client) {
           try {
-            const { data, error } = await supabase.auth.signUp({
+            const { data, error } = await client.auth.signUp({
               email: email,
               password: password,
               options: {
@@ -319,9 +341,9 @@ export function initAuth(showToast, onAuthSuccess) {
       }
       // Mode B: Log In via supabase.auth.signInWithPassword()
       else {
-        if (supabase) {
+        if (client) {
           try {
-            const { data, error } = await supabase.auth.signInWithPassword({
+            const { data, error } = await client.auth.signInWithPassword({
               email: email,
               password: password
             });
