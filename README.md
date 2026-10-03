@@ -10,7 +10,7 @@
 **EcoScan AI** is an intelligent, multimodal AI-assisted waste classification platform designed to guide sustainable waste segregation habits. It empowers users to photograph household items, instantly receive waste segregation classifications (**Biodegradable** vs **Non-Biodegradable**) with designated bin recommendations under Indian SWM guidelines, and track daily progress through an interactive, gamified claymorphic dashboard.
 
 ### 🌐 Live Deployment & Local Entrypoints
-- **Live GitHub Pages URL**: [https://kumarsachin1240421-code.github.io/CHE-110/](https://kumarsachin1240421-code.github.io/CHE-110/)
+- Live GitHub Pages URL: [https://kumarsachin1240421-code.github.io/CHE-110/](https://kumarsachin1240421-code.github.io/CHE-110/)
 - **Local Express Server**: `http://localhost:8088`
 
 ---
