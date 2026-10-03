@@ -27,8 +27,8 @@ app.use(express.static(__dirname));
  */
 app.get('/api/auth/config', (req, res) => {
   res.json({
-    supabaseUrl: (process.env.SUPABASE_URL || '').trim(),
-    supabaseAnonKey: (process.env.SUPABASE_ANON_KEY || '').trim()
+    supabaseUrl: (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim(),
+    supabaseAnonKey: (process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '').trim()
   });
 });
 
