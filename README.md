@@ -5,52 +5,73 @@
 
 ---
 
+Update the `README.md` file with the following complete documentation. Keep the project file structure exactly as it is, update the live URL to GitHub Pages, and document all recently implemented features (multimodal Gemini AI, claymorphic authenticated dashboard, dynamic reviews, 24h history, and network buffering):
+
+```markdown
 ## 🌿 Overview & Prototype Mode
 
-**EcoScan AI** is an intelligent waste-classification prototype designed to help users identify recyclable, organic, and hazardous materials, guiding sustainable disposal habits and encouraging daily circular-economy micro-actions.
+**EcoScan AI** is an intelligent, multimodal AI-assisted waste classification platform designed to guide sustainable waste segregation habits. It empowers users to photograph household items, instantly receive waste segregation classifications (Biodegradable vs Non-Biodegradable) with designated bin recommendations under Indian SWM guidelines, and track daily progress through an interactive, gamified claymorphic dashboard.
 
-### 🌐 Live Localhost URL
-- **[http://localhost:8088/](http://localhost:8088/)**
-- Direct entrypoint: **[http://localhost:8088/index.html](http://localhost:8088/index.html)**
+### 🌐 Live Deployment & Local Entrypoints
+- **Live GitHub Pages URL**: **https://kumarsachin1240421-code.github.io/CHE-110/**
+✨ Features Implemented
+Exact Reference Hero Section (Glassmorphism):
 
----
+Nature-inspired backdrop featuring moss, foliage, and sunlight accents.
 
-## ✨ Features Implemented
+Dark forest green overlay (#173D32, #0D251E) paired with fresh lime accents (#C5EF83).
 
-1. **Exact Reference Hero Section**:
-   - Nature-inspired photography background with dewy emerald moss, ferns, and dappled sunlight.
-   - Dark forest green overlay (`#173D32`, `#0D251E`) paired with fresh lime (`#C5EF83`).
-   - 3-Column layout:
-     - **Left Column**: Headline (*“A better planet. One scan at a time.”*), subtext, and 3-step pipeline (**Scan** → **Sort** → **Grow**) with frosted circular icons and connecting lines.
-     - **Center Column**: Floating scan preview card showing the plastic bottle on moss with white viewfinder corner brackets and lime `Plastic` badge.
-     - **Right Column**: Frosted-glass login card with `backdrop-filter: blur(24px)`, Login/Sign up tabs, custom SVG input icons, show/hide password toggle, "Remember me" checkbox, full-width lime submit button, and `─── New here? Create an account ───`.
-   - **No `01 / WELCOME`**: Completely removed from the hero and header.
-   - Visible brand logo and **EcoScan AI** title on the top left.
+Clean full-screen hero viewport (100vh) without bottom content visible on load; strictly displays the 3-step pipeline (Scan → Sort → Grow), real-time scan preview, and authenticated sign-in/registration module.
 
-2. **Reviews with Everyday Indian Samples**:
-   - Smooth-scrolling navigation when clicking **Reviews**.
-   - Testimonials featuring everyday Indian household items:
-     - Rinsing and attaching corner snippets of plastic milk packets (Amul/Mother Dairy) for *Sookha Kachra* (dry recyclables).
-     - Poly-lined roadside chai paper cups vs dry cardboard segregation.
-     - Crushing PET mineral water bottles for municipal collection.
-     - *Geela Kachra* (wet kitchen food scraps) segregation under Indian SWM 2016 guidelines.
-   - Real user locations: Pune, South Delhi, Bengaluru, and Jaipur.
+Visible brand logo with the EcoScan AI emblem.
 
-3. **Official Support Modal**:
-   - Clicking **Support** in the header opens an accessible modal with:
-     - **Official email**: `ecoscan123@gmail.com`
-     - **Helpline number**: `+91 1800-267-3267`
-     - Accessible close button and Escape key dismiss.
+Authenticated Dashboard (3D Tactile Claymorphism):
 
-4. **Right-Downside Frequently Asked Questions (FAQ) Widget**:
-   - Docked on the bottom-right corner of the screen.
-   - Clean expandable accordion answering the top questions users ask regarding Indian waste rules, milk pouches, chai cups, support channels, and offline prototype usage.
+Dedicated post-login interface set against a clean, light ceramic backdrop with soft 3D claymorphic interactive buttons and active states.
 
----
+Tab 1: Home (Waste Scanner & Segregation):
 
-## 🗂️ Project File Structure
+Real-time device camera viewfinder capture ("Snap a Frame") and manual file upload options.
 
-```text
+Multimodal AI-backed recognition (Google Gemini API) categorizing waste into Biodegradable or Non-Biodegradable alongside designated dustbin color coding (e.g., Green Bin for organic/wet, Blue Bin for dry recyclables).
+
+Completed scan verification with animated "Done" checkmark and a 24-hour ephemeral scan history log.
+
+"I Put This in the Dustbin" sort confirmation action.
+
+Tab 2: Progress (Gamification & Badges):
+
+Eco-Points reward mechanics granting points per verified disposal.
+
+Milestone progress tracker unlocking aesthetic badges (Eco Seedling, Green Scout, Earth Guardian, Forest Ranger, Planet Champion).
+
+Tab 3: Facts, Daily Tips & Reviews:
+
+Dynamically generated daily environmental facts and practical eco-friendly advice.
+
+Authenticated user review submission form with star ratings.
+
+Community Review & Upvoting System:
+
+Zero hardcoded or mock testimonials; strictly showcases authentic, user-generated submissions.
+
+Public view accessible from the landing page navigation.
+
+Community upvoting/liking system dynamically sorting reviews by popularity in descending order.
+
+Author-restricted deletion: Delete controls are strictly reserved for logged-in review owners.
+
+Network Resilience & Profile Customization:
+
+Automated offline detector triggering an eco-themed network buffering illustration modal during connectivity drops.
+
+Comprehensive profile management allowing custom name updates and avatar capture via webcam or device storage.
+
+Contact support accessible via modal overlay (ecoscan123@gmail.com / +91 1800-267-3267).
+
+
+🗂️ Project File Structure
+
 CHE-110/
 ├── index.html            # Main semantic HTML structure
 ├── manifest.json         # PWA configuration
@@ -58,13 +79,13 @@ CHE-110/
 ├── README.md             # Project documentation
 ├── assets/
 │   ├── images/
-│   │   ├── forest_bg.jpg       # Nature backdrop
-│   │   ├── plastic_bottle.jpg  # Hero scan sample
-│   │   ├── banana_peel.jpg     # Organic waste sample
-│   │   ├── soda_can.jpg        # Metal sample
-│   │   └── cardboard_box.jpg   # Paper sample
+│   │   ├── forest_bg.jpg        # Nature backdrop
+│   │   ├── plastic_bottle.jpg   # Hero scan sample
+│   │   ├── banana_peel.jpg      # Organic waste sample
+│   │   ├── soda_can.jpg         # Metal sample
+│   │   └── cardboard_box.jpg    # Paper sample
 │   └── icons/
-│       └── logo_icon.png       # Leaf squircle emblem
+│       └── logo_icon.png        # Leaf squircle emblem
 ├── css/
 │   ├── main.css          # Design system tokens, typography, toasts, modal base
 │   ├── welcome.css       # 3-column hero, frosted card, reviews, FAQ widget
@@ -73,7 +94,6 @@ CHE-110/
     ├── mockData.js       # Indian sample reviews and FAQ data
     ├── auth.js           # Client-side authentication simulation
     └── app.js            # Smooth scroll, modal controller, FAQ accordion
-```
 
 ---
 
