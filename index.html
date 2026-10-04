@@ -547,10 +547,15 @@
 
             <!-- Daily Clean Habits Section -->
             <div>
-              <h3 class="section-title" style="margin-bottom: 1.15rem;">
-                <span>🌿</span> Friendly Cleanliness & Segregation Habits
-              </h3>
-              <div class="habits-grid">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.15rem; flex-wrap: wrap; gap: 0.5rem;">
+                <h3 class="section-title" style="margin-bottom: 0;">
+                  <span>🌿</span> Friendly Cleanliness &amp; Segregation Habits
+                </h3>
+                <button type="button" id="btn-refresh-habits" class="btn btn-ghost-light" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; border-radius: 999px; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer;" title="Cycle new cleanliness & segregation advice">
+                  <span>🔄</span> Refresh Advice
+                </button>
+              </div>
+              <div class="habits-grid" id="habits-grid-container">
                 <div class="habit-card">
                   <span class="habit-icon">💧</span>
                   <h4 class="habit-title">The 10-Second Quick Rinse</h4>

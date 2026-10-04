@@ -66,65 +66,79 @@ app.post('/api/classify', async (req, res) => {
     const base64Data = typeof image === 'string' ? image : '';
     const cleanBase64 = base64Data.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
-    const prompt = `You are an expert waste segregation and environmental recycling AI.
-Analyze the image and strictly classify the waste item into one of the 5 standard municipal color bins according to these rules:
-• GREEN: Biodegradable & Organic waste (food leftovers, peels, plants)
-• BLUE: Dry & Recyclable waste (clean plastic, paper, glass, metal)
-• RED: Hazardous & Biomedical waste (chemicals, batteries, electronics, toxic items)
-• YELLOW: Sanitary & Medical waste (bandages, syringes, diapers, medical hygiene)
-• BLACK: General & Mixed waste (inert sweepings, composite materials, non-recyclables)
+    const prompt = `You are an expert waste segregation AI. Classify the given image into strictly one of 5 bins:
+• GREEN: Biodegradable & Organic kitchen waste, raw peels, leftovers, plant matter.
+• BLUE: Clean, segregated dry recyclables (clean pet bottles, dry paper/cardboard, clean soda cans).
+• RED: Toxic/Hazardous items, batteries, wires, discarded electronics, chemical containers.
+• YELLOW: Sanitary pads, diapers, medical bandages, cotton swabs, clinical waste.
+• BLACK: General mixed waste, dust sweepings, cigarette butts, non-recyclable multi-layer packaging, mixed industrial scrap, rubble, or unsegregated debris piles.
 
-Force response output strictly as clean JSON matching this exact structure:
+CRITICAL OVERRIDE RULE:
+- If the image shows mixed scrap, debris mounds, rusty scrap heaps, or unsegregated garbage piles, NEVER categorize it as BLUE.
+- Assign it strictly to BLACK (General/Mixed Waste) or RED (if hazardous/e-waste).
+
+Return valid JSON strictly matching this exact schema:
 {
-  "waste_detected": "string",
+  "waste_detected": "",
   "bin_colour": "GREEN" | "BLUE" | "RED" | "YELLOW" | "BLACK",
-  "category_name": "string",
-  "instructions": "string",
-  "points_value": number
+  "category_name": "",
+  "instructions": "",
+  "points_value": 
 }
 
 Rules:
 - bin_colour MUST be strictly one of: "GREEN", "BLUE", "RED", "YELLOW", "BLACK".
-- instructions must be 1 concise sentence under 20 words.
+- category_name must be a short descriptive name for the waste category.
+- instructions must be 1 concise sentence under 20 words for safe disposal.
 - points_value must be an integer (10 for GREEN/BLUE/BLACK, 15 for RED/YELLOW).`;
 
-    // Strictly prioritize gemini-1.5-flash with resilient fallback for upstream 404/availability
-    const candidateModels = ['gemini-1.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'];
-    let response = null;
-    let lastError = null;
+    // Strictly set Gemini model to gemini-1.5-flash with seamless fallback
+    let resultText = null;
+    try {
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-1.5-flash',
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+          maxOutputTokens: 250
+        }
+      });
 
-    for (const modelName of candidateModels) {
-      try {
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.2,
-            maxOutputTokens: 250
+      const response = await model.generateContent([
+        prompt,
+        {
+          inlineData: {
+            mimeType: mimeType || "image/jpeg",
+            data: cleanBase64
           }
-        });
-
-        response = await model.generateContent([
-          prompt,
-          {
-            inlineData: {
-              data: cleanBase64,
-              mimeType: mimeType || "image/jpeg"
-            }
+        }
+      ]);
+      resultText = response?.response?.text();
+    } catch (primaryErr) {
+      console.warn("Primary model gemini-1.5-flash failed, falling back to gemini-3.5-flash-lite:", primaryErr.message);
+      const fallbackModel = genAI.getGenerativeModel({
+        model: 'gemini-3.5-flash-lite',
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+          maxOutputTokens: 250
+        }
+      });
+      const fallbackResp = await fallbackModel.generateContent([
+        prompt,
+        {
+          inlineData: {
+            mimeType: mimeType || "image/jpeg",
+            data: cleanBase64
           }
-        ]);
-        if (response) break;
-      } catch (err) {
-        lastError = err;
-        console.warn(`Model ${modelName} call failed, trying next candidate:`, err.message || err);
-      }
+        }
+      ]);
+      resultText = fallbackResp?.response?.text();
     }
 
-    if (!response) {
-      throw lastError || new Error('Gemini Vision model call failed.');
+    if (!resultText) {
+      throw new Error('Gemini Vision model call failed.');
     }
-
-    const resultText = response.response.text();
     let parsedResult = null;
     try {
       parsedResult = JSON.parse(resultText);
@@ -148,12 +162,26 @@ Rules:
 
     const wasteDetected = parsedResult.waste_detected || parsedResult.itemName || 'Identified Waste';
     let rawBin = String(parsedResult.bin_colour || parsedResult.binColor || parsedResult.binType || '').trim().toUpperCase();
-    let binColour = 'BLUE';
-    if (rawBin.includes('RED') || String(parsedResult.category_name).toUpperCase().includes('HAZARD')) binColour = 'RED';
-    else if (rawBin.includes('YELLOW') || String(parsedResult.category_name).toUpperCase().includes('SANITARY') || String(parsedResult.category_name).toUpperCase().includes('MEDICAL')) binColour = 'YELLOW';
-    else if (rawBin.includes('BLACK') || String(parsedResult.category_name).toUpperCase().includes('GENERAL') || String(parsedResult.category_name).toUpperCase().includes('MIXED')) binColour = 'BLACK';
-    else if (rawBin.includes('GREEN') || String(parsedResult.category_name).toUpperCase().includes('BIO') || String(parsedResult.category_name).toUpperCase().includes('ORGANIC')) binColour = 'GREEN';
-    else if (rawBin.includes('BLUE') || String(parsedResult.category_name).toUpperCase().includes('RECYCL')) binColour = 'BLUE';
+    const rawCat = String(parsedResult.category_name || parsedResult.category || '').trim().toUpperCase();
+    let binColour = 'BLACK';
+
+    // Strict 5-bin resolution with critical override
+    if (rawBin === 'GREEN') binColour = 'GREEN';
+    else if (rawBin === 'BLUE') binColour = 'BLUE';
+    else if (rawBin === 'RED') binColour = 'RED';
+    else if (rawBin === 'YELLOW') binColour = 'YELLOW';
+    else if (rawBin === 'BLACK') binColour = 'BLACK';
+    else if (rawBin.includes('RED') || rawCat.includes('HAZARD') || rawCat.includes('BIOMEDICAL') || rawCat.includes('TOXIC') || rawCat.includes('BATTER') || rawCat.includes('E-WASTE') || rawCat.includes('ELECTRONIC') || rawCat.includes('CHEMICAL') || rawCat.includes('WIRE')) {
+      binColour = 'RED';
+    } else if (rawBin.includes('BLACK') || rawCat.includes('GENERAL') || rawCat.includes('MIXED') || rawCat.includes('INERT') || rawCat.includes('NON-RECYCL') || rawCat.includes('TRASH') || rawCat.includes('SWEEPING') || rawCat.includes('SCRAP') || rawCat.includes('DEBRIS') || rawCat.includes('RUBBLE') || rawCat.includes('HEAP') || rawCat.includes('MOUND') || rawCat.includes('CIGARETTE') || rawCat.includes('MULTI-LAYER') || rawCat.includes('UNSEGREGATED')) {
+      binColour = 'BLACK';
+    } else if (rawBin.includes('YELLOW') || rawCat.includes('SANITARY') || rawCat.includes('MEDICAL') || rawCat.includes('HYGIENE') || rawCat.includes('BANDAGE') || rawCat.includes('DIAPER') || rawCat.includes('SWAB') || rawCat.includes('SYRINGE') || rawCat.includes('CLINICAL')) {
+      binColour = 'YELLOW';
+    } else if (rawBin.includes('GREEN') || rawCat.includes('BIO') || rawCat.includes('ORGANIC') || rawCat.includes('COMPOST') || rawCat.includes('WET') || rawCat.includes('FOOD') || rawCat.includes('PEEL') || rawCat.includes('LEFTOVER') || rawCat.includes('PLANT') || rawCat.includes('KITCHEN')) {
+      binColour = 'GREEN';
+    } else if (rawBin.includes('BLUE') || rawCat.includes('DRY') || rawCat.includes('RECYCL') || rawCat.includes('PAPER') || rawCat.includes('PLASTIC') || rawCat.includes('METAL') || rawCat.includes('GLASS') || rawCat.includes('BOTTLE') || rawCat.includes('CAN') || rawCat.includes('CARDBOARD')) {
+      binColour = 'BLUE';
+    }
 
     const defaultCategories = {
       GREEN: 'Biodegradable & Organic',
@@ -204,10 +232,10 @@ Rules:
   }
 });
 
+
 /**
  * GET /api/daily-fact
- * Generates an inspiring, student-focused, scientifically accurate environmental fact
- * and an easy daily green habit tip using the Gemini API.
+ * Legacy compatibility endpoint for daily facts & news.
  */
 app.get('/api/daily-fact', async (req, res) => {
   try {
@@ -222,23 +250,23 @@ app.get('/api/daily-fact', async (req, res) => {
 
     const genAI = new GoogleGenerativeAI(apiKey.trim());
     const candidateModels = [
+      'gemini-1.5-flash',
       'gemini-3.5-flash-lite',
       'gemini-3.8-flash',
-      'gemini-2.5-flash',
-      'gemini-1.5-flash'
+      'gemini-2.5-flash'
     ];
 
-    const systemInstruction = `You are an educational environmental scientist and zero-waste mentor. Generate an inspiring, student-focused, scientifically accurate environmental fact and an easy, practical daily green habit tip.
+    const systemInstruction = `You are an educational environmental mentor. Generate an inspiring, student-focused, relatable environmental breakthrough and a practical daily green habit tip in simple, conversational English.
 Return valid JSON only matching this exact schema:
 {
-  "tag": "short category badge (e.g. Ocean Health, Circular Economy, Soil Science, Renewable Power, Plastic Reduction)",
+  "tag": "e.g. GLOBAL GREEN UPDATE, RECYCLING BREAKTHROUGH, CLEAN ENERGY MILESTONE",
   "title": "concise, engaging headline (max 8 words)",
-  "fact": "a compelling, scientifically accurate 2-sentence fact with concrete data or real-world impact",
+  "fact": "a compelling, conversational 2-sentence fact explaining real-world positive progress",
   "habitTip": "one easy, actionable daily green habit students and citizens can adopt immediately",
   "icon": "a single relevant emoji (e.g. 🌊, 🌲, 🐝, 🌍, 💡, 🪴, ♻️, 🍃)"
 }`;
 
-    const prompt = 'Generate a fresh, unique daily environmental fact and daily green habit tip for students and citizens.';
+    const prompt = 'Generate a fresh, unique daily environmental breakthrough and friendly daily green habit tip for students and citizens.';
 
     let parsedResult = null;
     let lastError = null;
@@ -249,7 +277,7 @@ Return valid JSON only matching this exact schema:
           model: modelName,
           generationConfig: {
             responseMimeType: 'application/json',
-            temperature: 0.7
+            temperature: 0.75
           },
           systemInstruction
         });
