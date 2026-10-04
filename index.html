@@ -517,9 +517,14 @@
 
             <!-- History Activity Log -->
             <div class="history-section">
-              <h3 class="section-title">
-                <span>📜</span> Recent Verified Sorts
-              </h3>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.15rem; flex-wrap: wrap; gap: 0.5rem;">
+                <h3 class="section-title" style="margin-bottom: 0;">
+                  <span>📜</span> Recent Verified Sorts
+                </h3>
+                <button type="button" id="btn-clear-all-history" class="btn btn-ghost-light" style="padding: 0.35rem 0.85rem; font-size: 0.8rem; border-radius: 999px; display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;" title="Clear all scan history">
+                  <span>🗑️</span> Clear All History
+                </button>
+              </div>
               <div class="history-list" id="history-list-container">
                 <!-- Dynamically populated sorting log -->
               </div>

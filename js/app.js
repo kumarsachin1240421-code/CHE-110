@@ -5,7 +5,7 @@
  */
 
 import { WASTE_ITEMS_DATABASE, ECO_FACTS_DATABASE } from './mockData.js';
-import { initAuth, signOutUser } from './auth.js';
+import { initAuth, signOutUser, getSupabase } from './auth.js';
 
 // Gemini API Configuration (Decoded at runtime to satisfy GitHub Push Protection while evaluating to exact key string)
 const GEMINI_API_KEY = (typeof atob === 'function' ? atob : (b64) => Buffer.from(b64, 'base64').toString('utf-8'))("QVEuQWI4Uk42SUNNSF9aTlB1UjBZU3diRlhqM3RGdWdCa2FnQ0trVU5TSmVoZzEtVUQxaFE=");
@@ -513,6 +513,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (welcomePage) welcomePage.style.display = 'none';
     if (dashboardPage) dashboardPage.style.display = 'flex';
     updateDashboardUserProfile(user);
+    if (user && user.id) {
+      fetchUserScanHistory(user);
+    }
     switchDashboardTab('home');
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -1611,9 +1614,260 @@ Rules:
     });
   }
 
+  // ==========================================================================
+  // USER-ISOLATED 24-HOUR SCAN HISTORY ENGINE (Supabase 'scan_history')
+  // ==========================================================================
+  async function fetchUserScanHistory(currentUser) {
+    if (!currentUser || !currentUser.id) return [];
+
+    const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    let history = [];
+    const client = getSupabase();
+
+    if (client) {
+      try {
+        // 1. Automatically purge/delete records older than 24 hours from Supabase for that user
+        await client
+          .from('scan_history')
+          .delete()
+          .eq('user_id', currentUser.id)
+          .lt('created_at', cutoffTime);
+
+        // 2. Fetch query strictly filters by logged-in user and within last 24 hours
+        const { data, error } = await client
+          .from('scan_history')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .gte('created_at', cutoffTime)
+          .order('created_at', { ascending: false });
+
+        if (!error && Array.isArray(data)) {
+          history = data.map(row => ({
+            id: row.id,
+            user_id: row.user_id,
+            item: row.item || row.item_name || 'Identified Waste',
+            bin: row.bin || row.bin_type || 'Disposal Bin',
+            binClass: row.binClass || row.bin_class || (row.bin_colour ? `bin-${String(row.bin_colour).toLowerCase()}` : 'bin-blue'),
+            points: Number(row.points || row.points_value) || 10,
+            created_at: row.created_at,
+            date: new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            time: new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }));
+        }
+      } catch (err) {
+        console.warn('Supabase scan_history query:', err);
+      }
+    }
+
+    // User-isolated storage cache keyed strictly by user ID to prevent cross-user leakage
+    const userHistoryKey = `ecoscan_scan_history_${currentUser.id}`;
+    if (history.length > 0) {
+      localStorage.setItem(userHistoryKey, JSON.stringify(history));
+    } else {
+      try {
+        const raw = localStorage.getItem(userHistoryKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const cutoffMs = Date.now() - 24 * 60 * 60 * 1000;
+          history = parsed.filter(i => {
+            const t = i.created_at ? new Date(i.created_at).getTime() : 0;
+            return t >= cutoffMs;
+          });
+          localStorage.setItem(userHistoryKey, JSON.stringify(history));
+        }
+      } catch {}
+    }
+
+    currentUser.history = history;
+    saveCurrentUser(currentUser);
+    return history;
+  }
+
+  async function addScanHistoryRecord(entry, currentUser) {
+    if (!currentUser || !currentUser.id) return;
+    const client = getSupabase();
+
+    const record = {
+      id: entry.id || ('sort_' + Date.now()),
+      user_id: currentUser.id,
+      item: entry.item,
+      bin: entry.bin,
+      binClass: entry.binClass,
+      points: entry.points,
+      created_at: entry.created_at || new Date().toISOString(),
+      date: entry.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      time: entry.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    if (client) {
+      try {
+        const { data, error } = await client
+          .from('scan_history')
+          .insert([{
+            user_id: currentUser.id,
+            item: record.item,
+            bin: record.bin,
+            binClass: record.binClass,
+            points: record.points,
+            created_at: record.created_at
+          }])
+          .select();
+
+        if (!error && data && data[0] && data[0].id) {
+          record.id = data[0].id;
+        }
+      } catch (err) {
+        console.warn('Supabase insert scan_history warning:', err);
+      }
+    }
+
+    const userHistoryKey = `ecoscan_scan_history_${currentUser.id}`;
+    let userHistory = [];
+    try {
+      userHistory = JSON.parse(localStorage.getItem(userHistoryKey) || '[]');
+    } catch {}
+
+    userHistory.unshift(record);
+    const cutoffMs = Date.now() - 24 * 60 * 60 * 1000;
+    userHistory = userHistory.filter(i => {
+      const t = i.created_at ? new Date(i.created_at).getTime() : 0;
+      return t >= cutoffMs;
+    });
+
+    localStorage.setItem(userHistoryKey, JSON.stringify(userHistory));
+    currentUser.history = userHistory;
+    saveCurrentUser(currentUser);
+  }
+
+  async function deleteScanHistoryRecord(recordId, currentUser) {
+    if (!currentUser || !currentUser.id) return;
+    const client = getSupabase();
+
+    if (client) {
+      try {
+        await client
+          .from('scan_history')
+          .delete()
+          .eq('id', recordId)
+          .eq('user_id', currentUser.id);
+      } catch (err) {
+        console.warn('Supabase delete scan_history record:', err);
+      }
+    }
+
+    const userHistoryKey = `ecoscan_scan_history_${currentUser.id}`;
+    let userHistory = [];
+    try {
+      userHistory = JSON.parse(localStorage.getItem(userHistoryKey) || '[]');
+    } catch {}
+    userHistory = userHistory.filter(i => String(i.id) !== String(recordId));
+    localStorage.setItem(userHistoryKey, JSON.stringify(userHistory));
+
+    currentUser.history = userHistory;
+    saveCurrentUser(currentUser);
+
+    // Instantly update UI without needing page refresh
+    renderHistoryList(userHistory);
+    showToast('Record Removed', 'Scan history entry deleted.', 'info');
+  }
+
+  async function clearAllUserScanHistory(currentUser) {
+    if (!currentUser || !currentUser.id) return;
+    const client = getSupabase();
+
+    if (client) {
+      try {
+        await client
+          .from('scan_history')
+          .delete()
+          .eq('user_id', currentUser.id);
+      } catch (err) {
+        console.warn('Supabase clear all scan_history:', err);
+      }
+    }
+
+    const userHistoryKey = `ecoscan_scan_history_${currentUser.id}`;
+    localStorage.removeItem(userHistoryKey);
+
+    currentUser.history = [];
+    saveCurrentUser(currentUser);
+
+    // Instantly update UI without needing page refresh
+    renderHistoryList([]);
+    showToast('History Cleared', 'All your scan records have been cleared.', 'info');
+  }
+
+  function renderHistoryList(history) {
+    const historyListContainer = document.getElementById('history-list-container');
+    const btnClearAllHistory = document.getElementById('btn-clear-all-history');
+    if (!historyListContainer) return;
+
+    if (btnClearAllHistory) {
+      btnClearAllHistory.style.display = (history && history.length > 0) ? 'inline-flex' : 'none';
+    }
+
+    if (!history || history.length === 0) {
+      historyListContainer.innerHTML = `
+        <div style="padding: 1.5rem; text-align: center; color: rgba(255, 255, 255, 0.5); font-style: italic;">
+          No verified sorts in the past 24 hours. Scan items in the Home tab and confirm disposal to earn points!
+        </div>
+      `;
+      return;
+    }
+
+    let historyHtml = '';
+    history.forEach(entry => {
+      historyHtml += `
+        <div class="history-item" id="hist_item_${entry.id}">
+          <div class="history-item-left">
+            <span class="history-item-icon">🗑️</span>
+            <div>
+              <div class="history-item-name">${escapeHtml(entry.item)}</div>
+              <div class="history-item-time">${entry.date || 'Today'} • ${entry.time || ''}</div>
+            </div>
+          </div>
+          <div class="history-item-right">
+            <span class="dustbin-callout ${entry.binClass || 'bin-blue'}" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; font-weight: 800; border-radius: 999px;">
+              ${escapeHtml(entry.bin || 'Dry Bin')}
+            </span>
+            <span class="history-points-badge">+${entry.points || 10} pts</span>
+            <button type="button" class="btn-history-delete" data-delete-scan-id="${entry.id}" title="Remove scan entry">
+              <span>🗑️</span>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+    historyListContainer.innerHTML = historyHtml;
+
+    // Attach individual delete event listeners
+    historyListContainer.querySelectorAll('.btn-history-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const scanId = btn.dataset.deleteScanId;
+        if (scanId) {
+          deleteScanHistoryRecord(scanId, getCurrentUser());
+        }
+      });
+    });
+  }
+
+  // Clear All History Button Listener
+  const btnClearAllHistory = document.getElementById('btn-clear-all-history');
+  if (btnClearAllHistory) {
+    btnClearAllHistory.addEventListener('click', () => {
+      const user = getCurrentUser();
+      if (!user || !user.history || user.history.length === 0) {
+        showToast('History Empty', 'No scan records to clear.', 'info');
+        return;
+      }
+      clearAllUserScanHistory(user);
+    });
+  }
+
   // "I Put This in the Dustbin (Confirm Sort)" Button Action
   if (btnConfirmSort) {
-    btnConfirmSort.addEventListener('click', () => {
+    btnConfirmSort.addEventListener('click', async () => {
       let user = getCurrentUser() || { name: 'Eco Member', email: 'guest@ecoscan.ai', points: 0, sorts: 0, scans: 0, history: [] };
 
       const oldBadge = getUserBadge(user.points || 0);
@@ -1631,10 +1885,11 @@ Rules:
         binClass: currentActiveItem.binClass,
         points: pointsAwarded,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        created_at: new Date().toISOString()
       };
-      user.history = user.history || [];
-      user.history.unshift(historyEntry);
+
+      await addScanHistoryRecord(historyEntry, user);
 
       saveCurrentUser(user);
       updateDashboardUserProfile(user);
@@ -1695,7 +1950,7 @@ Rules:
   // ==========================================================================
   // TAB 2: PROGRESS (Gamification, Points & Badges)
   // ==========================================================================
-  function renderProgressTab() {
+  async function renderProgressTab() {
     const user = getCurrentUser() || { points: 0, sorts: 0, scans: 0, history: [] };
     const points = user.points || 0;
     const badgeInfo = getNextBadgeInfo(points);
@@ -1747,39 +2002,13 @@ Rules:
       });
     }
 
-    // History Activity Log
-    const historyListContainer = document.getElementById('history-list-container');
-    if (historyListContainer) {
-      const history = user.history || [];
-      if (history.length === 0) {
-        historyListContainer.innerHTML = `
-          <div style="padding: 1.5rem; text-align: center; color: rgba(255, 255, 255, 0.5); font-style: italic;">
-            No verified sorts yet. Scan items in the Home tab and confirm disposal to earn points!
-          </div>
-        `;
-      } else {
-        let historyHtml = '';
-        history.slice(0, 8).forEach(entry => {
-          historyHtml += `
-            <div class="history-item">
-              <div class="history-item-left">
-                <span class="history-item-icon">🗑️</span>
-                <div>
-                  <div class="history-item-name">${escapeHtml(entry.item)}</div>
-                  <div class="history-item-time">${entry.date || 'Today'} • ${entry.time || ''}</div>
-                </div>
-              </div>
-              <div class="history-item-right">
-                <span class="dustbin-callout ${entry.binClass || 'bin-blue'}" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; font-weight: 800; border-radius: 999px;">
-                  ${escapeHtml(entry.bin || 'Dry Bin')}
-                </span>
-                <span class="history-points-badge">+${entry.points || 10} pts</span>
-              </div>
-            </div>
-          `;
-        });
-        historyListContainer.innerHTML = historyHtml;
-      }
+    // Render current history from local cache immediately
+    renderHistoryList(user.history || []);
+
+    // Fetch user-isolated 24h history from Supabase with auto-cleanup
+    if (user && user.id) {
+      const liveHistory = await fetchUserScanHistory(user);
+      renderHistoryList(liveHistory);
     }
   }
 

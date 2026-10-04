@@ -54,18 +54,25 @@ function formatUserData(supaUser, fallbackName = "") {
     existingUser = JSON.parse(localStorage.getItem("ecoscan_current_user") || "null");
   } catch {}
 
+  const isSameUser = Boolean(
+    existingUser && (
+      (existingUser.id && supaUser.id && existingUser.id === supaUser.id) ||
+      (existingUser.email && supaUser.email && existingUser.email.toLowerCase() === supaUser.email.toLowerCase())
+    )
+  );
+
   const displayName = metadata.name || fallbackName || (supaUser.email ? supaUser.email.split("@")[0] : "Eco Member");
 
   return {
     id: supaUser.id,
     name: displayName,
     email: supaUser.email || "",
-    avatar: metadata.avatar || existingUser?.avatar || null,
-    points: existingUser?.points ?? 0,
-    sorts: existingUser?.sorts ?? 0,
-    scans: existingUser?.scans ?? 0,
-    history: existingUser?.history || [],
-    recentScans: existingUser?.recentScans || [],
+    avatar: metadata.avatar || (isSameUser ? existingUser?.avatar : null),
+    points: isSameUser ? (existingUser?.points ?? 0) : 0,
+    sorts: isSameUser ? (existingUser?.sorts ?? 0) : 0,
+    scans: isSameUser ? (existingUser?.scans ?? 0) : 0,
+    history: isSameUser ? (existingUser?.history || []) : [],
+    recentScans: isSameUser ? (existingUser?.recentScans || []) : [],
     isLoggedIn: true
   };
 }
@@ -83,11 +90,7 @@ export async function signOutUser() {
     }
   }
   try {
-    const user = JSON.parse(localStorage.getItem("ecoscan_current_user") || "null");
-    if (user) {
-      user.isLoggedIn = false;
-      localStorage.setItem("ecoscan_current_user", JSON.stringify(user));
-    }
+    localStorage.removeItem("ecoscan_current_user");
   } catch {}
 }
 
@@ -387,22 +390,26 @@ export function initAuth(showToast, onAuthSuccess) {
       existingUser = JSON.parse(localStorage.getItem("ecoscan_current_user") || "null");
     } catch {}
 
+    const isSameUser = Boolean(
+      existingUser && existingUser.email && existingUser.email.toLowerCase() === email.toLowerCase()
+    );
+
     const displayName = isSignup
       ? name || "Eco Member"
-      : existingUser?.email === email && existingUser?.name
+      : isSameUser && existingUser?.name
       ? existingUser.name
       : email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1);
 
     const user = {
-      id: existingUser?.id || "usr_" + Date.now(),
+      id: isSameUser && existingUser?.id ? existingUser.id : ("usr_" + Date.now()),
       name: displayName,
       email: email,
-      avatar: existingUser?.avatar || null,
-      points: existingUser?.points ?? 0,
-      sorts: existingUser?.sorts ?? 0,
-      scans: existingUser?.scans ?? 0,
-      history: existingUser?.history || [],
-      recentScans: existingUser?.recentScans || [],
+      avatar: isSameUser ? (existingUser?.avatar || null) : null,
+      points: isSameUser ? (existingUser?.points ?? 0) : 0,
+      sorts: isSameUser ? (existingUser?.sorts ?? 0) : 0,
+      scans: isSameUser ? (existingUser?.scans ?? 0) : 0,
+      history: isSameUser ? (existingUser?.history || []) : [],
+      recentScans: isSameUser ? (existingUser?.recentScans || []) : [],
       isLoggedIn: true
     };
 
